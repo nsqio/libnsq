@@ -1,0 +1,4 @@
+libnsq.a
+test
+*.o
+*.dSYM
