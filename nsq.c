@@ -21,7 +21,12 @@ static void nsq_reader_connect_cb(struct NSQDConnection *conn, void *arg)
     
     // subscribe
     buffer_reset(conn->command_buf);
-    nsq_subscribe(conn->command_buf, "test", "ch");
+    nsq_subscribe(conn->command_buf, rdr->topic, rdr->channel);
+    buffered_socket_write_buffer(conn->bs, conn->command_buf);
+    
+    // send initial RDY
+    buffer_reset(conn->command_buf);
+    nsq_ready(conn->command_buf, rdr->max_in_flight);
     buffered_socket_write_buffer(conn->bs, conn->command_buf);
 }
 
@@ -57,6 +62,8 @@ static void nsq_reader_close_cb(struct NSQDConnection *conn, void *arg)
     if (rdr->close_callback) {
         rdr->close_callback(rdr, conn);
     }
+    
+    LL_DELETE(rdr->conns, conn);
 }
 
 struct NSQReader *new_nsq_reader(const char *topic, const char *channel,
