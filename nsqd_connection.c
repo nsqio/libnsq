@@ -35,7 +35,7 @@ static void nsqd_connection_read_size(struct BufferedSocket *buffsock, void *arg
     // convert message length header from big-endian
     conn->current_msg_size = ntohl(*msg_size_be);
     
-    _DEBUG("%s: msg_size = %lu bytes \n", __FUNCTION__, conn->current_msg_size);
+    _DEBUG("%s: msg_size = %d bytes \n", __FUNCTION__, conn->current_msg_size);
     
     buffered_socket_read_bytes(buffsock, conn->current_msg_size, nsqd_connection_read_data, conn);
 }
@@ -43,22 +43,22 @@ static void nsqd_connection_read_size(struct BufferedSocket *buffsock, void *arg
 static void nsqd_connection_read_data(struct BufferedSocket *buffsock, void *arg)
 {
     struct NSQDConnection *conn = (struct NSQDConnection *)arg;
-    size_t msg_size = conn->current_msg_size;
     uint32_t *frame_type_be;
-    uint32_t frame_type;
     
     frame_type_be = (uint32_t *)buffsock->read_buf->data;
-    frame_type = ntohl(*frame_type_be);
+    conn->current_frame_type = ntohl(*frame_type_be);
     buffer_drain(buffsock->read_buf, 4);
-    msg_size -= 4;
+    conn->current_msg_size -= 4;
     
-    _DEBUG("%s: frame type %d, data: %.*s\n", __FUNCTION__, frame_type, (int)msg_size, buffsock->read_buf->data);
+    _DEBUG("%s: frame type %d, data: %.*s\n", __FUNCTION__, conn->current_frame_type, 
+        conn->current_msg_size, buffsock->read_buf->data);
     
+    conn->current_data = buffsock->read_buf->data;
     if (conn->data_callback) {
         conn->data_callback(conn, conn->arg);
     }
     
-    buffer_drain(buffsock->read_buf, msg_size);
+    buffer_drain(buffsock->read_buf, conn->current_msg_size);
     
     buffered_socket_read_bytes(buffsock, 4, nsqd_connection_read_size, conn);
 }
@@ -68,6 +68,10 @@ static void nsqd_connection_close_cb(struct BufferedSocket *buffsock, void *arg)
     struct NSQDConnection *conn = (struct NSQDConnection *)arg;
     
     _DEBUG("%s: %p\n", __FUNCTION__, arg);
+    
+    if (conn->close_callback) {
+        conn->close_callback(conn, conn->arg);
+    }
 }
 
 static void nsqd_connection_read_cb(struct BufferedSocket *buffsock, struct Buffer *buf, void *arg)

@@ -25,10 +25,45 @@ static void nsq_reader_connect_cb(struct NSQDConnection *conn, void *arg)
     buffered_socket_write_buffer(conn->bs, conn->command_buf);
 }
 
+static void nsq_reader_data_cb(struct NSQDConnection *conn, void *arg)
+{
+    struct NSQReader *rdr = (struct NSQReader *)arg;
+    
+    _DEBUG("%s: %p\n", __FUNCTION__, rdr);
+    
+    switch (conn->current_frame_type) {
+        case NSQ_FRAME_TYPE_RESPONSE:
+            if (strncmp(conn->current_data, "_heartbeat_", 11) == 0) {
+                buffer_reset(conn->command_buf);
+                nsq_nop(conn->command_buf);
+                buffered_socket_write_buffer(conn->bs, conn->command_buf);
+                return;
+            }
+            break;
+    }
+    
+    if (rdr->data_callback) {
+        rdr->data_callback(rdr, conn, 
+            conn->current_frame_type, conn->current_msg_size, conn->current_data);
+    }
+}
+
+static void nsq_reader_close_cb(struct NSQDConnection *conn, void *arg)
+{
+    struct NSQReader *rdr = (struct NSQReader *)arg;
+    
+    _DEBUG("%s: %p\n", __FUNCTION__, rdr);
+    
+    if (rdr->close_callback) {
+        rdr->close_callback(rdr, conn);
+    }
+}
+
 struct NSQReader *new_nsq_reader(const char *topic, const char *channel,
-    NSQReaderCallback connect_callback,
-    NSQReaderCallback close_callback,
-    NSQReaderCallback data_callback)
+    void (*connect_callback)(struct NSQReader *rdr, struct NSQDConnection *conn),
+    void (*close_callback)(struct NSQReader *rdr, struct NSQDConnection *conn),
+    void (*data_callback)(struct NSQReader *rdr, struct NSQDConnection *conn,
+        uint32_t frame_type, uint32_t msg_size, char *data))
 {
     struct NSQReader *rdr;
     
@@ -58,7 +93,7 @@ int nsq_reader_connect_to_nsqd(struct NSQReader *rdr, const char *address, int p
     struct NSQDConnection *conn;
     
     conn = new_nsqd_connection(address, port, 
-        nsq_reader_connect_cb, NULL, NULL, rdr);
+        nsq_reader_connect_cb, nsq_reader_close_cb, nsq_reader_data_cb, rdr);
     LL_APPEND(rdr->conns, conn);
     
     return nsqd_connection_connect(conn);

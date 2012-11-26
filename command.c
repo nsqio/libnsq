@@ -36,3 +36,8 @@ void nsq_requeue(struct Buffer *buf, const char *id, int timeout_ms)
     n = sprintf(b, "REQ %s %d\n", id, timeout_ms);
     buffer_add(buf, b, n);
 }
+
+void nsq_nop(struct Buffer *buf)
+{
+    buffer_add(buf, "NOP\n", 4);
+}
