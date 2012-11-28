@@ -74,20 +74,6 @@ static void nsqd_connection_close_cb(struct BufferedSocket *buffsock, void *arg)
     }
 }
 
-static void nsqd_connection_read_cb(struct BufferedSocket *buffsock, struct Buffer *buf, void *arg)
-{
-    struct NSQDConnection *conn = (struct NSQDConnection *)arg;
-    
-    _DEBUG("%s: %p\n", __FUNCTION__, arg);
-}
-
-static void nsqd_connection_write_cb(struct BufferedSocket *buffsock, void *arg)
-{
-    struct NSQDConnection *conn = (struct NSQDConnection *)arg;
-    
-    _DEBUG("%s: %p\n", __FUNCTION__, arg);
-}
-
 static void nsqd_connection_error_cb(struct BufferedSocket *buffsock, void *arg)
 {
     struct NSQDConnection *conn = (struct NSQDConnection *)arg;
@@ -104,7 +90,7 @@ struct NSQDConnection *new_nsqd_connection(const char *address, int port,
     struct NSQDConnection *conn;
     
     conn = malloc(sizeof(struct NSQDConnection));
-    conn->command_buf = new_buffer(4096);
+    conn->command_buf = new_buffer(4096, 4096);
     conn->current_msg_size = 0;
     conn->connect_callback = connect_callback;
     conn->close_callback = close_callback;
@@ -112,7 +98,7 @@ struct NSQDConnection *new_nsqd_connection(const char *address, int port,
     conn->arg = arg;
     conn->bs = new_buffered_socket(address, port,
         nsqd_connection_connect_cb, nsqd_connection_close_cb,
-        nsqd_connection_read_cb, nsqd_connection_write_cb, nsqd_connection_error_cb,
+        NULL, NULL, nsqd_connection_error_cb,
         conn);
     
     return conn;
