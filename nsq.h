@@ -19,13 +19,13 @@ struct NSQReader {
     struct NSQDConnection *conns;
     void (*connect_callback)(struct NSQReader *rdr, struct NSQDConnection *conn);
     void (*close_callback)(struct NSQReader *rdr, struct NSQDConnection *conn);
-    void (*msg_callback)(struct NSQReader *rdr, struct NSQMessage *msg);
+    void (*msg_callback)(struct NSQReader *rdr, struct NSQDConnection *conn, struct NSQMessage *msg);
 };
 
 struct NSQReader *new_nsq_reader(const char *topic, const char *channel,
     void (*connect_callback)(struct NSQReader *rdr, struct NSQDConnection *conn),
     void (*close_callback)(struct NSQReader *rdr, struct NSQDConnection *conn),
-    void (*msg_callback)(struct NSQReader *rdr, struct NSQMessage *msg));
+    void (*msg_callback)(struct NSQReader *rdr, struct NSQDConnection *conn, struct NSQMessage *msg));
 void free_nsq_reader(struct NSQReader *rdr);
 int nsq_reader_connect_to_nsqd(struct NSQReader *rdr, const char *address, int port);
 void nsq_run(struct ev_loop *loop);
@@ -68,5 +68,6 @@ struct NSQMessage {
 };
 
 struct NSQMessage *nsq_decode_message(const char *data, size_t data_length);
+void free_nsq_message(struct NSQMessage *msg);
 
 #endif

@@ -49,8 +49,9 @@ static void nsq_reader_data_cb(struct NSQDConnection *conn, void *arg)
         case NSQ_FRAME_TYPE_MESSAGE:
             msg = nsq_decode_message(conn->current_data, conn->current_msg_size);
             if (rdr->msg_callback) {
-                rdr->msg_callback(rdr, msg);
+                rdr->msg_callback(rdr, conn, msg);
             }
+            free_nsq_message(msg);
             break;
     }
 }
@@ -71,7 +72,7 @@ static void nsq_reader_close_cb(struct NSQDConnection *conn, void *arg)
 struct NSQReader *new_nsq_reader(const char *topic, const char *channel,
     void (*connect_callback)(struct NSQReader *rdr, struct NSQDConnection *conn),
     void (*close_callback)(struct NSQReader *rdr, struct NSQDConnection *conn),
-    void (*msg_callback)(struct NSQReader *rdr, struct NSQMessage *msg))
+    void (*msg_callback)(struct NSQReader *rdr, struct NSQDConnection *conn, struct NSQMessage *msg))
 {
     struct NSQReader *rdr;
     
