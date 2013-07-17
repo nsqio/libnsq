@@ -33,6 +33,7 @@ static void nsq_reader_connect_cb(struct NSQDConnection *conn, void *arg)
 static void nsq_reader_data_cb(struct NSQDConnection *conn, void *arg)
 {
     struct NSQReader *rdr = (struct NSQReader *)arg;
+    struct NSQMessage *msg;
     
     _DEBUG("%s: %p\n", __FUNCTION__, rdr);
     
@@ -45,11 +46,12 @@ static void nsq_reader_data_cb(struct NSQDConnection *conn, void *arg)
                 return;
             }
             break;
-    }
-    
-    if (rdr->data_callback) {
-        rdr->data_callback(rdr, conn, 
-            conn->current_frame_type, conn->current_msg_size, conn->current_data);
+        case NSQ_FRAME_TYPE_MESSAGE:
+            msg = nsq_decode_message(conn->current_data, conn->current_msg_size);
+            if (rdr->msg_callback) {
+                rdr->msg_callback(rdr, msg);
+            }
+            break;
     }
 }
 
@@ -69,8 +71,7 @@ static void nsq_reader_close_cb(struct NSQDConnection *conn, void *arg)
 struct NSQReader *new_nsq_reader(const char *topic, const char *channel,
     void (*connect_callback)(struct NSQReader *rdr, struct NSQDConnection *conn),
     void (*close_callback)(struct NSQReader *rdr, struct NSQDConnection *conn),
-    void (*data_callback)(struct NSQReader *rdr, struct NSQDConnection *conn,
-        uint32_t frame_type, uint32_t msg_size, char *data))
+    void (*msg_callback)(struct NSQReader *rdr, struct NSQMessage *msg))
 {
     struct NSQReader *rdr;
     
@@ -80,7 +81,7 @@ struct NSQReader *new_nsq_reader(const char *topic, const char *channel,
     rdr->max_in_flight = 1;
     rdr->connect_callback = connect_callback;
     rdr->close_callback = close_callback;
-    rdr->data_callback = data_callback;
+    rdr->msg_callback = msg_callback;
     rdr->conns = NULL;
     
     return rdr;

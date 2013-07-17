@@ -16,7 +16,7 @@ libnsq: libnsq.a
 %.o: %.c
 	$(CC) -o $@ -c $< $(CFLAGS)
 
-libnsq.a: command.o nsq.o nsqd_connection.o http.o
+libnsq.a: command.o nsq.o nsqd_connection.o http.o message.o
 	$(AR) $(AR_FLAGS) $@ $^
 	$(RANLIB) $@
 

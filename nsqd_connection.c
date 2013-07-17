@@ -35,7 +35,7 @@ static void nsqd_connection_read_size(struct BufferedSocket *buffsock, void *arg
     // convert message length header from big-endian
     conn->current_msg_size = ntohl(*msg_size_be);
     
-    _DEBUG("%s: msg_size = %d bytes \n", __FUNCTION__, conn->current_msg_size);
+    _DEBUG("%s: msg_size = %d bytes %p\n", __FUNCTION__, conn->current_msg_size, buffsock->read_buf->data);
     
     buffered_socket_read_bytes(buffsock, conn->current_msg_size, nsqd_connection_read_data, conn);
 }
@@ -78,7 +78,7 @@ static void nsqd_connection_error_cb(struct BufferedSocket *buffsock, void *arg)
 {
     struct NSQDConnection *conn = (struct NSQDConnection *)arg;
     
-    _DEBUG("%s: %p\n", __FUNCTION__, arg);
+    _DEBUG("%s: conn %p\n", __FUNCTION__, conn);
 }
 
 struct NSQDConnection *new_nsqd_connection(const char *address, int port, 

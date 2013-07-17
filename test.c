@@ -6,10 +6,10 @@
 #define _DEBUG(...) do {;} while (0)
 #endif
 
-static void on_data(struct NSQReader *rdr, struct NSQDConnection *conn, 
-    uint32_t frame_type, uint32_t msg_size, char *data)
+static void message_handler(struct NSQReader *rdr, struct NSQMessage *msg)
 {
-    _DEBUG("%s: %d, %d, %.*s\n", __FUNCTION__, frame_type, msg_size, msg_size, data);
+    _DEBUG("%s: %lld, %d, %s, %lu, %.*s\n", __FUNCTION__, msg->timestamp, msg->attempts, msg->id, 
+        msg->body_length, (int)msg->body_length, msg->body);
 }
 
 int main(int argc, char **argv)
@@ -17,7 +17,7 @@ int main(int argc, char **argv)
     struct NSQReader *rdr;
     
     rdr = new_nsq_reader("test", "ch",
-        NULL, NULL, on_data);
+        NULL, NULL, message_handler);
     nsq_reader_connect_to_nsqd(rdr, "127.0.0.1", 4150);
     nsq_run(ev_default_loop(0));
     

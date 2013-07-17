@@ -10,6 +10,7 @@
 
 enum {NSQ_FRAME_TYPE_RESPONSE, NSQ_FRAME_TYPE_ERROR, NSQ_FRAME_TYPE_MESSAGE} frame_type;
 struct NSQDConnection;
+struct NSQMessage;
 
 struct NSQReader {
     char *topic;
@@ -18,15 +19,13 @@ struct NSQReader {
     struct NSQDConnection *conns;
     void (*connect_callback)(struct NSQReader *rdr, struct NSQDConnection *conn);
     void (*close_callback)(struct NSQReader *rdr, struct NSQDConnection *conn);
-    void (*data_callback)(struct NSQReader *rdr, struct NSQDConnection *conn, 
-        uint32_t frame_type, uint32_t msg_size, char *data);
+    void (*msg_callback)(struct NSQReader *rdr, struct NSQMessage *msg);
 };
 
 struct NSQReader *new_nsq_reader(const char *topic, const char *channel,
     void (*connect_callback)(struct NSQReader *rdr, struct NSQDConnection *conn),
     void (*close_callback)(struct NSQReader *rdr, struct NSQDConnection *conn),
-    void (*data_callback)(struct NSQReader *rdr, struct NSQDConnection *conn,
-        uint32_t frame_type, uint32_t msg_size, char *data));
+    void (*msg_callback)(struct NSQReader *rdr, struct NSQMessage *msg));
 void free_nsq_reader(struct NSQReader *rdr);
 int nsq_reader_connect_to_nsqd(struct NSQReader *rdr, const char *address, int port);
 void nsq_run(struct ev_loop *loop);
@@ -59,5 +58,15 @@ void nsq_ready(struct Buffer *buf, int count);
 void nsq_finish(struct Buffer *buf, const char *id);
 void nsq_requeue(struct Buffer *buf, const char *id, int timeout_ms);
 void nsq_nop(struct Buffer *buf);
+
+struct NSQMessage {
+    int64_t timestamp;
+    uint16_t attempts;
+    char id[16];
+    size_t body_length;
+    char *body;
+};
+
+struct NSQMessage *nsq_decode_message(const char *data, size_t data_length);
 
 #endif
