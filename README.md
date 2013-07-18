@@ -1,6 +1,6 @@
 ## libnsq
 
-C client library for [NSQ][1]
+async C client library for [NSQ][1]
 
 ### Status
 
