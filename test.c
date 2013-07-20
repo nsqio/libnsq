@@ -28,7 +28,7 @@ int main(int argc, char **argv)
     loop = ev_default_loop(0);
     rdr = new_nsq_reader(loop, "test", "ch",
         NULL, NULL, message_handler);
-    nsq_reader_connect_to_nsqd(rdr, "127.0.0.1", 4150);
+    // nsq_reader_connect_to_nsqd(rdr, "127.0.0.1", 4150);
     nsq_reader_add_nsqlookupd_endpoint(rdr, "127.0.0.1", 4161);
     nsq_run(loop);
     

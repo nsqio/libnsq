@@ -1,6 +1,6 @@
-#include <json-c/json.h>
 #include "nsq.h"
 #include "utlist.h"
+#include "http.h"
 
 #ifdef DEBUG
 #define _DEBUG(...) fprintf(stdout, __VA_ARGS__)
@@ -73,11 +73,33 @@ static void nsq_reader_close_cb(struct NSQDConnection *conn, void *arg)
     free_nsqd_connection(conn);
 }
 
-static void nsq_lookupd_poll_cb(EV_P_ struct ev_timer *w, int revents)
+void nsq_lookupd_request_cb(struct HttpResponse *resp, void *arg);
+
+static void nsq_reader_lookupd_poll_cb(EV_P_ struct ev_timer *w, int revents)
 {
     struct NSQReader *rdr = (struct NSQReader *)w->data;
+    struct NSQLookupdEndpoint *nsqlookupd_endpoint;
+    struct HttpRequest *req;
+    int i, idx, count = 0;
+    char buf[256];
     
-    _DEBUG("%s: rdr %p\n", __FUNCTION__, rdr);
+    LL_FOREACH(rdr->lookupd, nsqlookupd_endpoint) {
+        count++;
+    }
+    idx = rand() % count;
+    
+    _DEBUG("%s: rdr %p (chose %d)\n", __FUNCTION__, rdr, idx);
+    
+    i = 0;
+    LL_FOREACH(rdr->lookupd, nsqlookupd_endpoint) {
+        if (i++ == idx) {
+            sprintf(buf, "http://%s:%d/lookup?topic=%s", nsqlookupd_endpoint->address,
+                nsqlookupd_endpoint->port, rdr->topic);
+            req = new_http_request(buf, nsq_lookupd_request_cb, rdr);
+            http_client_get((struct HttpClient *)rdr->httpc, req);
+            break;
+        }
+    }
     
     ev_timer_again(rdr->loop, &rdr->lookupd_poll_timer);
 }
@@ -100,8 +122,10 @@ struct NSQReader *new_nsq_reader(struct ev_loop *loop, const char *topic, const 
     rdr->lookupd = NULL;
     rdr->loop = loop;
     
+    rdr->httpc = new_http_client(rdr->loop);
+    
     // TODO: configurable interval
-    ev_timer_init(&rdr->lookupd_poll_timer, nsq_lookupd_poll_cb, 0., 5.);
+    ev_timer_init(&rdr->lookupd_poll_timer, nsq_reader_lookupd_poll_cb, 0., 5.);
     rdr->lookupd_poll_timer.data = rdr;
     ev_timer_again(rdr->loop, &rdr->lookupd_poll_timer);
     
@@ -151,5 +175,6 @@ int nsq_reader_connect_to_nsqd(struct NSQReader *rdr, const char *address, int p
 
 void nsq_run(struct ev_loop *loop)
 {
+    srand(time(NULL));
     ev_loop(loop, 0);
 }
