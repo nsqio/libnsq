@@ -81,7 +81,7 @@ static void nsqd_connection_error_cb(struct BufferedSocket *buffsock, void *arg)
     _DEBUG("%s: conn %p\n", __FUNCTION__, conn);
 }
 
-struct NSQDConnection *new_nsqd_connection(const char *address, int port, 
+struct NSQDConnection *new_nsqd_connection(struct ev_loop *loop, const char *address, int port, 
     NSQDConnectionCallback connect_callback,
     NSQDConnectionCallback close_callback,
     NSQDConnectionCallback data_callback,
@@ -96,7 +96,9 @@ struct NSQDConnection *new_nsqd_connection(const char *address, int port,
     conn->close_callback = close_callback;
     conn->data_callback = data_callback;
     conn->arg = arg;
-    conn->bs = new_buffered_socket(address, port,
+    conn->loop = loop;
+    
+    conn->bs = new_buffered_socket(loop, address, port,
         nsqd_connection_connect_cb, nsqd_connection_close_cb,
         NULL, NULL, nsqd_connection_error_cb,
         conn);

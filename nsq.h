@@ -51,7 +51,7 @@ struct NSQDConnection {
     struct NSQDConnection *next;
 };
 
-struct NSQDConnection *new_nsqd_connection(const char *address, int port, 
+struct NSQDConnection *new_nsqd_connection(struct ev_loop *loop, const char *address, int port, 
     NSQDConnectionCallback connect_callback,
     NSQDConnectionCallback close_callback,
     NSQDConnectionCallback data_callback,
