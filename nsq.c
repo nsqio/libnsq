@@ -1,4 +1,6 @@
+#include <json-c/json.h>
 #include "nsq.h"
+#include "utlist.h"
 
 #ifdef DEBUG
 #define _DEBUG(...) fprintf(stdout, __VA_ARGS__)
@@ -140,7 +142,7 @@ int nsq_reader_connect_to_nsqd(struct NSQReader *rdr, const char *address, int p
 {
     struct NSQDConnection *conn;
     
-    conn = new_nsqd_connection(address, port, 
+    conn = new_nsqd_connection(rdr->loop, address, port, 
         nsq_reader_connect_cb, nsq_reader_close_cb, nsq_reader_data_cb, rdr);
     LL_APPEND(rdr->conns, conn);
     

@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
-#include <utlist.h>
 #include <ev.h>
 #include <evbuffsock.h>
 
