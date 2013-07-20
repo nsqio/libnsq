@@ -67,9 +67,20 @@ static void nsq_reader_close_cb(struct NSQDConnection *conn, void *arg)
     }
     
     LL_DELETE(rdr->conns, conn);
+    
+    free_nsqd_connection(conn);
 }
 
-struct NSQReader *new_nsq_reader(const char *topic, const char *channel,
+static void nsq_lookupd_poll_cb(EV_P_ struct ev_timer *w, int revents)
+{
+    struct NSQReader *rdr = (struct NSQReader *)w->data;
+    
+    _DEBUG("%s: rdr %p\n", __FUNCTION__, rdr);
+    
+    ev_timer_again(rdr->loop, &rdr->lookupd_poll_timer);
+}
+
+struct NSQReader *new_nsq_reader(struct ev_loop *loop, const char *topic, const char *channel,
     void (*connect_callback)(struct NSQReader *rdr, struct NSQDConnection *conn),
     void (*close_callback)(struct NSQReader *rdr, struct NSQDConnection *conn),
     void (*msg_callback)(struct NSQReader *rdr, struct NSQDConnection *conn, struct NSQMessage *msg))
@@ -84,17 +95,45 @@ struct NSQReader *new_nsq_reader(const char *topic, const char *channel,
     rdr->close_callback = close_callback;
     rdr->msg_callback = msg_callback;
     rdr->conns = NULL;
+    rdr->lookupd = NULL;
+    rdr->loop = loop;
+    
+    // TODO: configurable interval
+    ev_timer_init(&rdr->lookupd_poll_timer, nsq_lookupd_poll_cb, 0., 5.);
+    rdr->lookupd_poll_timer.data = rdr;
+    ev_timer_again(rdr->loop, &rdr->lookupd_poll_timer);
     
     return rdr;
 }
 
 void free_nsq_reader(struct NSQReader *rdr)
 {
+    struct NSQDConnection *conn;
+    struct NSQLookupdEndpoint *nsqlookupd_endpoint;
+    
     if (rdr) {
+        // TODO: this should probably trigger disconnections and then keep
+        // trying to clean up until everything upstream is finished
+        LL_FOREACH(rdr->conns, conn) {
+            nsqd_connection_disconnect(conn);
+        }
+        LL_FOREACH(rdr->lookupd, nsqlookupd_endpoint) {
+            free_nsqlookupd_endpoint(nsqlookupd_endpoint);
+        }
         free(rdr->topic);
         free(rdr->channel);
         free(rdr);
     }
+}
+
+int nsq_reader_add_nsqlookupd_endpoint(struct NSQReader *rdr, const char *address, int port)
+{
+    struct NSQLookupdEndpoint *nsqlookupd_endpoint;
+    
+    nsqlookupd_endpoint = new_nsqlookupd_endpoint(address, port);
+    LL_APPEND(rdr->lookupd, nsqlookupd_endpoint);
+    
+    return 1;
 }
 
 int nsq_reader_connect_to_nsqd(struct NSQReader *rdr, const char *address, int port)

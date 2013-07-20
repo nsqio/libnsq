@@ -17,17 +17,22 @@ struct NSQReader {
     char *channel;
     int max_in_flight;
     struct NSQDConnection *conns;
+    struct NSQLookupdEndpoint *lookupd;
+    struct ev_timer lookupd_poll_timer;
+    struct ev_loop *loop;
     void (*connect_callback)(struct NSQReader *rdr, struct NSQDConnection *conn);
     void (*close_callback)(struct NSQReader *rdr, struct NSQDConnection *conn);
     void (*msg_callback)(struct NSQReader *rdr, struct NSQDConnection *conn, struct NSQMessage *msg);
 };
 
-struct NSQReader *new_nsq_reader(const char *topic, const char *channel,
+struct NSQReader *new_nsq_reader(struct ev_loop *loop, const char *topic, const char *channel,
     void (*connect_callback)(struct NSQReader *rdr, struct NSQDConnection *conn),
     void (*close_callback)(struct NSQReader *rdr, struct NSQDConnection *conn),
     void (*msg_callback)(struct NSQReader *rdr, struct NSQDConnection *conn, struct NSQMessage *msg));
 void free_nsq_reader(struct NSQReader *rdr);
 int nsq_reader_connect_to_nsqd(struct NSQReader *rdr, const char *address, int port);
+int nsq_reader_add_nsqlookupd_endpoint(struct NSQReader *rdr, const char *address, int port);
+void nsq_reader_set_loop(struct NSQReader *rdr, struct ev_loop *loop);
 void nsq_run(struct ev_loop *loop);
 
 typedef void (*NSQDConnectionCallback)(struct NSQDConnection *conn, void *arg);
@@ -38,6 +43,7 @@ struct NSQDConnection {
     uint32_t current_msg_size;
     uint32_t current_frame_type;
     char *current_data;
+    struct ev_loop *loop;
     NSQDConnectionCallback connect_callback;
     NSQDConnectionCallback close_callback;
     NSQDConnectionCallback data_callback;
@@ -52,6 +58,7 @@ struct NSQDConnection *new_nsqd_connection(const char *address, int port,
     void *arg);
 void free_nsqd_connection(struct NSQDConnection *conn);
 int nsqd_connection_connect(struct NSQDConnection *conn);
+void nsqd_connection_disconnect(struct NSQDConnection *conn);
 
 void nsq_subscribe(struct Buffer *buf, const char *topic, const char *channel);
 void nsq_ready(struct Buffer *buf, int count);
@@ -69,5 +76,14 @@ struct NSQMessage {
 
 struct NSQMessage *nsq_decode_message(const char *data, size_t data_length);
 void free_nsq_message(struct NSQMessage *msg);
+
+struct NSQLookupdEndpoint {
+    char *address;
+    int port;
+    struct NSQLookupdEndpoint *next;
+};
+
+struct NSQLookupdEndpoint *new_nsqlookupd_endpoint(const char *address, int port);
+void free_nsqlookupd_endpoint(struct NSQLookupdEndpoint *nsqlookupd_endpoint);
 
 #endif

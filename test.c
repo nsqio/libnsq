@@ -23,11 +23,14 @@ static void message_handler(struct NSQReader *rdr, struct NSQDConnection *conn, 
 int main(int argc, char **argv)
 {
     struct NSQReader *rdr;
+    struct ev_loop *loop;
     
-    rdr = new_nsq_reader("test", "ch",
+    loop = ev_default_loop(0);
+    rdr = new_nsq_reader(loop, "test", "ch",
         NULL, NULL, message_handler);
     nsq_reader_connect_to_nsqd(rdr, "127.0.0.1", 4150);
-    nsq_run(ev_default_loop(0));
+    nsq_reader_add_nsqlookupd_endpoint(rdr, "127.0.0.1", 4161);
+    nsq_run(loop);
     
     return 0;
 }

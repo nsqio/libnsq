@@ -117,3 +117,8 @@ int nsqd_connection_connect(struct NSQDConnection *conn)
 {
     return buffered_socket_connect(conn->bs);
 }
+
+void nsqd_connection_disconnect(struct NSQDConnection *conn)
+{
+    buffered_socket_close(conn->bs);
+}
