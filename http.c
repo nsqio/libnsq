@@ -1,33 +1,14 @@
-#include <curl/curl.h>
 #include "nsq.h"
+#include "http.h"
 
-struct HttpClient {
-    CURLM *multi;
-    struct ev_loop *loop;
-    struct ev_timer timer_event;
-    int still_running;
-};
-
-struct HttpRequest {
-    CURL *easy;
-    char *url;
-    struct HttpClient *httpc;
-    char error[CURL_ERROR_SIZE];
-    struct Buffer *data;
-};
-
-struct HttpSocket {
-    curl_socket_t sockfd;
-    CURL *easy;
-    int action;
-    long timeout;
-    struct ev_io ev;
-    int evset;
-    struct HttpClient *httpc;
-};
+#ifdef DEBUG
+#define _DEBUG(...) fprintf(stdout, __VA_ARGS__)
+#else
+#define _DEBUG(...) do {;} while (0)
+#endif
 
 static void timer_cb(EV_P_ struct ev_timer *w, int revents);
- 
+
 static int multi_timer_cb(CURLM *multi, long timeout_ms, void *arg)
 {
     struct HttpClient *httpc = (struct HttpClient *)arg;
@@ -57,14 +38,20 @@ static void check_multi_info(struct HttpClient *httpc)
         if (msg->msg == CURLMSG_DONE) {
             easy = msg->easy_handle;
             res = msg->data.result;
-            
             curl_easy_getinfo(easy, CURLINFO_PRIVATE, &req);
             curl_easy_getinfo(easy, CURLINFO_EFFECTIVE_URL, &eff_url);
-            curl_multi_remove_handle(httpc->multi, easy);
-            curl_easy_cleanup(easy);
-            free_buffer(req->data);
-            free(req->url);
-            free(req);
+            
+            if (req->callback) {
+                struct HttpResponse *resp;
+                resp = malloc(sizeof(struct HttpResponse));
+                resp->status_code = res;
+                resp->data = req->data;
+                req->callback(resp, req->cb_arg);
+                free(resp);
+            }
+            
+            // TODO: client should be responsible for this
+            free_http_request(req);
         }
     }
 }
@@ -86,7 +73,9 @@ static void event_cb(EV_P_ struct ev_io *w, int revents)
     int action = (revents & EV_READ ? CURL_POLL_IN : 0) | (revents & EV_WRITE ? CURL_POLL_OUT : 0);
     
     rc = curl_multi_socket_action(httpc->multi, w->fd, action, &httpc->still_running);
-    // TODO: handle rc
+    if (rc != CURLM_OK) {
+        // TODO: handle rc
+    }
     check_multi_info(httpc);
 }
 
@@ -96,7 +85,9 @@ static void timer_cb(EV_P_ struct ev_timer *w, int revents)
     CURLMcode rc;
     
     rc = curl_multi_socket_action(httpc->multi, CURL_SOCKET_TIMEOUT, 0, &httpc->still_running);
-    // TODO: handle rc
+    if (rc != CURLM_OK) {
+        // TODO: handle rc
+    }
     check_multi_info(httpc);
 }
 
@@ -140,11 +131,12 @@ static int sock_cb(CURL *e, curl_socket_t s, int what, void *arg, void *sock_arg
     return 0;
 }
 
-struct HttpClient *new_http_client(void)
+struct HttpClient *new_http_client(struct ev_loop *loop)
 {
     struct HttpClient *httpc;
     
     httpc = malloc(sizeof(struct HttpClient));
+    httpc->loop = loop;
     httpc->multi = curl_multi_init();
     ev_timer_init(&httpc->timer_event, timer_cb, 0., 0.);
     httpc->timer_event.data = httpc;
@@ -165,10 +157,10 @@ void free_http_client(struct HttpClient *httpc)
     }
 }
 
-int http_client_get(struct HttpClient *httpc, const char *url)
+struct HttpRequest *new_http_request(const char *url, 
+    void (*callback)(struct HttpResponse *resp, void *arg), void *cb_arg)
 {
     struct HttpRequest *req;
-    CURLMcode rc;
     
     req = calloc(1, sizeof(struct HttpRequest));
     req->data = new_buffer(4096, 0);
@@ -176,8 +168,9 @@ int http_client_get(struct HttpClient *httpc, const char *url)
     if (!req->easy) {
         return 0;
     }
-    req->httpc = httpc;
     req->url = strdup(url);
+    req->callback = callback;
+    req->cb_arg = cb_arg;
     
     curl_easy_setopt(req->easy, CURLOPT_URL, req->url);
     curl_easy_setopt(req->easy, CURLOPT_WRITEFUNCTION, write_cb);
@@ -186,8 +179,29 @@ int http_client_get(struct HttpClient *httpc, const char *url)
     curl_easy_setopt(req->easy, CURLOPT_ERRORBUFFER, req->error);
     curl_easy_setopt(req->easy, CURLOPT_PRIVATE, req);
     
+    return req;
+}
+
+void free_http_request(struct HttpRequest *req)
+{
+    if (req) {
+        curl_multi_remove_handle(req->httpc->multi, req->easy);
+        curl_easy_cleanup(req->easy);
+        free_buffer(req->data);
+        free(req->url);
+        free(req);
+    }
+}
+
+int http_client_get(struct HttpClient *httpc, struct HttpRequest *req)
+{
+    CURLMcode rc;
+    
+    req->httpc = httpc;
     rc = curl_multi_add_handle(httpc->multi, req->easy);
-    // TODO: handle rc
+    if (rc != CURLM_OK) {
+        return 0;
+    }
     
     return 1;
 }

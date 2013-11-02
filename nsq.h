@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <time.h>
+#include <utlist.h>
 #include <ev.h>
 #include <evbuffsock.h>
 
@@ -19,6 +21,7 @@ struct NSQReader {
     struct NSQLookupdEndpoint *lookupd;
     struct ev_timer lookupd_poll_timer;
     struct ev_loop *loop;
+    void *httpc;
     void (*connect_callback)(struct NSQReader *rdr, struct NSQDConnection *conn);
     void (*close_callback)(struct NSQReader *rdr, struct NSQDConnection *conn);
     void (*msg_callback)(struct NSQReader *rdr, struct NSQDConnection *conn, struct NSQMessage *msg);
