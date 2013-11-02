@@ -10,7 +10,6 @@ subscribing and receiving messages via callback.
 
 TODO:
 
- * discovery via querying configured `nsqlookupd`
  * maintaining `RDY` count automatically
  * feature negotiation
  * better abstractions for responding to messages in your handlers
