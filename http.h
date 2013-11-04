@@ -22,7 +22,7 @@ struct HttpRequest {
     struct HttpClient *httpc;
     char error[CURL_ERROR_SIZE];
     struct Buffer *data;
-    void (*callback)(struct HttpResponse *resp, void *arg);
+    void (*callback)(struct HttpRequest *req, struct HttpResponse *resp, void *arg);
     void *cb_arg;
 };
 
@@ -39,8 +39,10 @@ struct HttpSocket {
 struct HttpClient *new_http_client(struct ev_loop *loop);
 void free_http_client(struct HttpClient *httpc);
 struct HttpRequest *new_http_request(const char *url,
-    void (*callback)(struct HttpResponse *resp, void *arg), void *cb_arg);
+    void (*callback)(struct HttpRequest *req, struct HttpResponse *resp, void *arg), void *cb_arg);
 void free_http_request(struct HttpRequest *req);
+struct HttpResponse *new_http_response(int status_code, void *data);
+void free_http_response(struct HttpResponse *resp);
 int http_client_get(struct HttpClient *httpc, struct HttpRequest *req);
 
 #endif

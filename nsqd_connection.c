@@ -15,6 +15,9 @@ static void nsqd_connection_connect_cb(struct BufferedSocket *buffsock, void *ar
 
     _DEBUG("%s: %p\n", __FUNCTION__, arg);
 
+    // send magic
+    buffered_socket_write(conn->bs, "  V2", 4);
+
     if (conn->connect_callback) {
         conn->connect_callback(conn, conn->arg);
     }
@@ -43,10 +46,9 @@ static void nsqd_connection_read_size(struct BufferedSocket *buffsock, void *arg
 static void nsqd_connection_read_data(struct BufferedSocket *buffsock, void *arg)
 {
     struct NSQDConnection *conn = (struct NSQDConnection *)arg;
-    uint32_t *frame_type_be;
+    struct NSQMessage *msg;
 
-    frame_type_be = (uint32_t *)buffsock->read_buf->data;
-    conn->current_frame_type = ntohl(*frame_type_be);
+    conn->current_frame_type = ntohl(*((uint32_t *)buffsock->read_buf->data));
     buffer_drain(buffsock->read_buf, 4);
     conn->current_msg_size -= 4;
 
@@ -54,8 +56,21 @@ static void nsqd_connection_read_data(struct BufferedSocket *buffsock, void *arg
         conn->current_msg_size, buffsock->read_buf->data);
 
     conn->current_data = buffsock->read_buf->data;
-    if (conn->data_callback) {
-        conn->data_callback(conn, conn->arg);
+    switch (conn->current_frame_type) {
+        case NSQ_FRAME_TYPE_RESPONSE:
+            if (strncmp(conn->current_data, "_heartbeat_", 11) == 0) {
+                buffer_reset(conn->command_buf);
+                nsq_nop(conn->command_buf);
+                buffered_socket_write_buffer(conn->bs, conn->command_buf);
+                return;
+            }
+            break;
+        case NSQ_FRAME_TYPE_MESSAGE:
+            msg = nsq_decode_message(conn->current_data, conn->current_msg_size);
+            if (conn->msg_callback) {
+                conn->msg_callback(conn, msg, conn->arg);
+            }
+            break;
     }
 
     buffer_drain(buffsock->read_buf, conn->current_msg_size);
@@ -82,9 +97,9 @@ static void nsqd_connection_error_cb(struct BufferedSocket *buffsock, void *arg)
 }
 
 struct NSQDConnection *new_nsqd_connection(struct ev_loop *loop, const char *address, int port,
-    NSQDConnectionCallback connect_callback,
-    NSQDConnectionCallback close_callback,
-    NSQDConnectionCallback data_callback,
+    void (*connect_callback)(struct NSQDConnection *conn, void *arg),
+    void (*close_callback)(struct NSQDConnection *conn, void *arg),
+    void (*msg_callback)(struct NSQDConnection *conn, struct NSQMessage *msg, void *arg),
     void *arg)
 {
     struct NSQDConnection *conn;
@@ -94,7 +109,7 @@ struct NSQDConnection *new_nsqd_connection(struct ev_loop *loop, const char *add
     conn->current_msg_size = 0;
     conn->connect_callback = connect_callback;
     conn->close_callback = close_callback;
-    conn->data_callback = data_callback;
+    conn->msg_callback = msg_callback;
     conn->arg = arg;
     conn->loop = loop;
 

@@ -37,8 +37,6 @@ int nsq_reader_add_nsqlookupd_endpoint(struct NSQReader *rdr, const char *addres
 void nsq_reader_set_loop(struct NSQReader *rdr, struct ev_loop *loop);
 void nsq_run(struct ev_loop *loop);
 
-typedef void (*NSQDConnectionCallback)(struct NSQDConnection *conn, void *arg);
-
 struct NSQDConnection {
     struct BufferedSocket *bs;
     struct Buffer *command_buf;
@@ -46,17 +44,17 @@ struct NSQDConnection {
     uint32_t current_frame_type;
     char *current_data;
     struct ev_loop *loop;
-    NSQDConnectionCallback connect_callback;
-    NSQDConnectionCallback close_callback;
-    NSQDConnectionCallback data_callback;
+    void (*connect_callback)(struct NSQDConnection *conn, void *arg);
+    void (*close_callback)(struct NSQDConnection *conn, void *arg);
+    void (*msg_callback)(struct NSQDConnection *conn, struct NSQMessage *msg, void *arg);
     void *arg;
     struct NSQDConnection *next;
 };
 
 struct NSQDConnection *new_nsqd_connection(struct ev_loop *loop, const char *address, int port,
-    NSQDConnectionCallback connect_callback,
-    NSQDConnectionCallback close_callback,
-    NSQDConnectionCallback data_callback,
+    void (*connect_callback)(struct NSQDConnection *conn, void *arg),
+    void (*close_callback)(struct NSQDConnection *conn, void *arg),
+    void (*msg_callback)(struct NSQDConnection *conn, struct NSQMessage *msg, void *arg),
     void *arg);
 void free_nsqd_connection(struct NSQDConnection *conn);
 int nsqd_connection_connect(struct NSQDConnection *conn);

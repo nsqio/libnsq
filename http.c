@@ -30,28 +30,21 @@ static void check_multi_info(struct HttpClient *httpc)
     char *eff_url;
     CURLMsg *msg;
     int msgs_left;
+    int status_code;
     struct HttpRequest *req;
+    struct HttpResponse *resp;
     CURL *easy;
-    CURLcode res;
 
     while ((msg = curl_multi_info_read(httpc->multi, &msgs_left))) {
         if (msg->msg == CURLMSG_DONE) {
             easy = msg->easy_handle;
-            res = msg->data.result;
             curl_easy_getinfo(easy, CURLINFO_PRIVATE, &req);
             curl_easy_getinfo(easy, CURLINFO_EFFECTIVE_URL, &eff_url);
-
+            curl_easy_getinfo(easy, CURLINFO_RESPONSE_CODE, &status_code);
             if (req->callback) {
-                struct HttpResponse *resp;
-                resp = malloc(sizeof(struct HttpResponse));
-                resp->status_code = res;
-                resp->data = req->data;
-                req->callback(resp, req->cb_arg);
-                free(resp);
+                resp = new_http_response(status_code, req->data);
+                req->callback(req, resp, req->cb_arg);
             }
-
-            // TODO: client should be responsible for this
-            free_http_request(req);
         }
     }
 }
@@ -158,7 +151,7 @@ void free_http_client(struct HttpClient *httpc)
 }
 
 struct HttpRequest *new_http_request(const char *url,
-    void (*callback)(struct HttpResponse *resp, void *arg), void *cb_arg)
+    void (*callback)(struct HttpRequest *req, struct HttpResponse *resp, void *arg), void *cb_arg)
 {
     struct HttpRequest *req;
 
@@ -190,6 +183,24 @@ void free_http_request(struct HttpRequest *req)
         free_buffer(req->data);
         free(req->url);
         free(req);
+    }
+}
+
+struct HttpResponse *new_http_response(int status_code, void *data)
+{
+    struct HttpResponse *resp;
+
+    resp = malloc(sizeof(struct HttpResponse));
+    resp->status_code = status_code;
+    resp->data = data;
+
+    return resp;
+}
+
+void free_http_response(struct HttpResponse *resp)
+{
+    if (resp) {
+        free(resp);
     }
 }
 

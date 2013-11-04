@@ -18,6 +18,8 @@ static void message_handler(struct NSQReader *rdr, struct NSQDConnection *conn, 
     buffer_reset(conn->command_buf);
     nsq_ready(conn->command_buf, rdr->max_in_flight);
     buffered_socket_write_buffer(conn->bs, conn->command_buf);
+
+    free_nsq_message(msg);
 }
 
 int main(int argc, char **argv)

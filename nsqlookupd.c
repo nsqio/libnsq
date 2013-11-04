@@ -8,7 +8,7 @@
 #define _DEBUG(...) do {;} while (0)
 #endif
 
-void nsq_lookupd_request_cb(struct HttpResponse *resp, void *arg)
+void nsq_lookupd_request_cb(struct HttpRequest *req, struct HttpResponse *resp, void *arg)
 {
     struct NSQReader *rdr = (struct NSQReader *)arg;
     struct json_object *jsobj, *data, *producers, *producer, *broadcast_address_obj, *tcp_port_obj;
@@ -19,6 +19,12 @@ void nsq_lookupd_request_cb(struct HttpResponse *resp, void *arg)
 
     _DEBUG("%s: status_code %d, body %.*s\n", __FUNCTION__, resp->status_code,
         (int)BUFFER_HAS_DATA(resp->data), resp->data->data);
+
+    if (resp->status_code != 200) {
+        free_http_response(resp);
+        free_http_request(req);
+        return;
+    }
 
     jstok = json_tokener_new();
     jsobj = json_tokener_parse_ex(jstok, resp->data->data, (int)BUFFER_HAS_DATA(resp->data));
@@ -70,6 +76,9 @@ void nsq_lookupd_request_cb(struct HttpResponse *resp, void *arg)
 
     json_object_put(jsobj);
     json_tokener_free(jstok);
+
+    free_http_response(resp);
+    free_http_request(req);
 }
 
 struct NSQLookupdEndpoint *new_nsqlookupd_endpoint(const char *address, int port)
