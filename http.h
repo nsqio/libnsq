@@ -38,7 +38,7 @@ struct HttpSocket {
 
 struct HttpClient *new_http_client(struct ev_loop *loop);
 void free_http_client(struct HttpClient *httpc);
-struct HttpRequest *new_http_request(const char *url, 
+struct HttpRequest *new_http_request(const char *url,
     void (*callback)(struct HttpResponse *resp, void *arg), void *cb_arg);
 void free_http_request(struct HttpRequest *req);
 int http_client_get(struct HttpClient *httpc, struct HttpRequest *req);

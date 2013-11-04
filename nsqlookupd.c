@@ -16,10 +16,10 @@ void nsq_lookupd_request_cb(struct HttpResponse *resp, void *arg)
     struct NSQDConnection *conn;
     const char *broadcast_address;
     int i, found, tcp_port;
-    
-    _DEBUG("%s: status_code %d, body %.*s\n", __FUNCTION__, resp->status_code, 
+
+    _DEBUG("%s: status_code %d, body %.*s\n", __FUNCTION__, resp->status_code,
         (int)BUFFER_HAS_DATA(resp->data), resp->data->data);
-    
+
     jstok = json_tokener_new();
     jsobj = json_tokener_parse_ex(jstok, resp->data->data, (int)BUFFER_HAS_DATA(resp->data));
     if (!jsobj) {
@@ -27,7 +27,7 @@ void nsq_lookupd_request_cb(struct HttpResponse *resp, void *arg)
         json_tokener_free(jstok);
         return;
     }
-    
+
     data = json_object_object_get(jsobj, "data");
     if (!jsobj) {
         _DEBUG("%s: error getting 'data' key\n", __FUNCTION__);
@@ -42,32 +42,32 @@ void nsq_lookupd_request_cb(struct HttpResponse *resp, void *arg)
         json_tokener_free(jstok);
         return;
     }
-    
+
     _DEBUG("%s: num producers %d\n", __FUNCTION__, json_object_array_length(producers));
     for (i = 0; i < json_object_array_length(producers); i++) {
         producer = json_object_array_get_idx(producers, i);
         broadcast_address_obj = json_object_object_get(producer, "broadcast_address");
         tcp_port_obj = json_object_object_get(producer, "tcp_port");
-        
+
         broadcast_address = json_object_get_string(broadcast_address_obj);
         tcp_port = json_object_get_int(tcp_port_obj);
-        
+
         _DEBUG("%s: broadcast_address %s, port %d\n", __FUNCTION__, broadcast_address, tcp_port);
-        
+
         found = 0;
         LL_FOREACH(rdr->conns, conn) {
-            if (strcmp(conn->bs->address, broadcast_address) == 0 
+            if (strcmp(conn->bs->address, broadcast_address) == 0
                 && conn->bs->port == tcp_port) {
                 found = 1;
                 break;
             }
         }
-        
+
         if (!found) {
             nsq_reader_connect_to_nsqd(rdr, broadcast_address, tcp_port);
         }
     }
-    
+
     json_object_put(jsobj);
     json_tokener_free(jstok);
 }
@@ -75,12 +75,12 @@ void nsq_lookupd_request_cb(struct HttpResponse *resp, void *arg)
 struct NSQLookupdEndpoint *new_nsqlookupd_endpoint(const char *address, int port)
 {
     struct NSQLookupdEndpoint *nsqlookupd_endpoint;
-    
+
     nsqlookupd_endpoint = malloc(sizeof(struct NSQLookupdEndpoint));
     nsqlookupd_endpoint->address = strdup(address);
     nsqlookupd_endpoint->port = port;
     nsqlookupd_endpoint->next = NULL;
-    
+
     return nsqlookupd_endpoint;
 }
 

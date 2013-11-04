@@ -4,7 +4,7 @@ async C client library for [NSQ][1]
 
 ### Status
 
-This is currently pretty low-level, but functional.  The raw building blocks for communicating 
+This is currently pretty low-level, but functional.  The raw building blocks for communicating
 asynchronously via the NSQ TCP protocol are in place as well as a basic "reader" abstraction that facilitates
 subscribing and receiving messages via callback.
 
