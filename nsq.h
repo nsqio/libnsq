@@ -5,17 +5,19 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <time.h>
-#include <utlist.h>
 #include <ev.h>
 #include <evbuffsock.h>
 
-enum {NSQ_FRAME_TYPE_RESPONSE, NSQ_FRAME_TYPE_ERROR, NSQ_FRAME_TYPE_MESSAGE} frame_type;
+#include "utlist.h"
+
+typedef enum {NSQ_FRAME_TYPE_RESPONSE, NSQ_FRAME_TYPE_ERROR, NSQ_FRAME_TYPE_MESSAGE} frame_type;
 struct NSQDConnection;
 struct NSQMessage;
 
 struct NSQReader {
     char *topic;
     char *channel;
+    void *processor; //for call back
     int max_in_flight;
     struct NSQDConnection *conns;
     struct NSQLookupdEndpoint *lookupd;
@@ -24,13 +26,13 @@ struct NSQReader {
     void *httpc;
     void (*connect_callback)(struct NSQReader *rdr, struct NSQDConnection *conn);
     void (*close_callback)(struct NSQReader *rdr, struct NSQDConnection *conn);
-    void (*msg_callback)(struct NSQReader *rdr, struct NSQDConnection *conn, struct NSQMessage *msg);
+    void (*msg_callback)(struct NSQReader *rdr, struct NSQDConnection *conn, struct NSQMessage *msg, void *processor);
 };
 
-struct NSQReader *new_nsq_reader(struct ev_loop *loop, const char *topic, const char *channel,
+struct NSQReader *new_nsq_reader(struct ev_loop *loop, const char *topic, const char *channel, void *processor, 
     void (*connect_callback)(struct NSQReader *rdr, struct NSQDConnection *conn),
     void (*close_callback)(struct NSQReader *rdr, struct NSQDConnection *conn),
-    void (*msg_callback)(struct NSQReader *rdr, struct NSQDConnection *conn, struct NSQMessage *msg));
+    void (*msg_callback)(struct NSQReader *rdr, struct NSQDConnection *conn, struct NSQMessage *msg, void *processor));
 void free_nsq_reader(struct NSQReader *rdr);
 int nsq_reader_connect_to_nsqd(struct NSQReader *rdr, const char *address, int port);
 int nsq_reader_add_nsqlookupd_endpoint(struct NSQReader *rdr, const char *address, int port);
@@ -69,7 +71,7 @@ void nsq_nop(struct Buffer *buf);
 struct NSQMessage {
     int64_t timestamp;
     uint16_t attempts;
-    char id[16];
+    char id[16+1];
     size_t body_length;
     char *body;
 };

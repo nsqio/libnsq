@@ -98,10 +98,10 @@ static int sock_cb(CURL *e, curl_socket_t s, int what, void *arg, void *sock_arg
             free(sock);
         }
     } else {
-        int new = 0;
+        int with_new = 0;
         if (!sock) {
-            sock = calloc(1, sizeof(struct HttpSocket));
-            new = 1;
+            sock = (struct HttpSocket *)calloc(1, sizeof(struct HttpSocket));
+            with_new = 1;
         }
 
         sock->httpc = httpc;
@@ -116,7 +116,7 @@ static int sock_cb(CURL *e, curl_socket_t s, int what, void *arg, void *sock_arg
         sock->evset = 1;
         ev_io_start(httpc->loop, &sock->ev);
 
-        if (new) {
+        if (with_new) {
             curl_multi_assign(httpc->multi, s, sock);
         }
     }
@@ -128,7 +128,7 @@ struct HttpClient *new_http_client(struct ev_loop *loop)
 {
     struct HttpClient *httpc;
 
-    httpc = malloc(sizeof(struct HttpClient));
+    httpc = (struct HttpClient *)malloc(sizeof(struct HttpClient));
     httpc->loop = loop;
     httpc->multi = curl_multi_init();
     ev_timer_init(&httpc->timer_event, timer_cb, 0., 0.);
@@ -155,7 +155,7 @@ struct HttpRequest *new_http_request(const char *url,
 {
     struct HttpRequest *req;
 
-    req = calloc(1, sizeof(struct HttpRequest));
+    req = (struct HttpRequest *)calloc(1, sizeof(struct HttpRequest));
     req->data = new_buffer(4096, 0);
     req->easy = curl_easy_init();
     if (!req->easy) {
@@ -171,6 +171,7 @@ struct HttpRequest *new_http_request(const char *url,
     curl_easy_setopt(req->easy, CURLOPT_VERBOSE, 1L);
     curl_easy_setopt(req->easy, CURLOPT_ERRORBUFFER, req->error);
     curl_easy_setopt(req->easy, CURLOPT_PRIVATE, req);
+    curl_easy_setopt(req->easy, CURLOPT_NOSIGNAL, 1L);
 
     return req;
 }
@@ -190,7 +191,7 @@ struct HttpResponse *new_http_response(int status_code, void *data)
 {
     struct HttpResponse *resp;
 
-    resp = malloc(sizeof(struct HttpResponse));
+    resp = (struct HttpResponse *)malloc(sizeof(struct HttpResponse));
     resp->status_code = status_code;
     resp->data = data;
 
