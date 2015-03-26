@@ -17,7 +17,7 @@ struct NSQMessage;
 struct NSQReader {
     char *topic;
     char *channel;
-    void *processor; //for call back
+    void *ctx; //context for call back
     int max_in_flight;
     struct NSQDConnection *conns;
     struct NSQLookupdEndpoint *lookupd;
@@ -26,13 +26,13 @@ struct NSQReader {
     void *httpc;
     void (*connect_callback)(struct NSQReader *rdr, struct NSQDConnection *conn);
     void (*close_callback)(struct NSQReader *rdr, struct NSQDConnection *conn);
-    void (*msg_callback)(struct NSQReader *rdr, struct NSQDConnection *conn, struct NSQMessage *msg, void *processor);
+    void (*msg_callback)(struct NSQReader *rdr, struct NSQDConnection *conn, struct NSQMessage *msg, void *ctx);
 };
 
-struct NSQReader *new_nsq_reader(struct ev_loop *loop, const char *topic, const char *channel, void *processor, 
+struct NSQReader *new_nsq_reader(struct ev_loop *loop, const char *topic, const char *channel, void *ctx,
     void (*connect_callback)(struct NSQReader *rdr, struct NSQDConnection *conn),
     void (*close_callback)(struct NSQReader *rdr, struct NSQDConnection *conn),
-    void (*msg_callback)(struct NSQReader *rdr, struct NSQDConnection *conn, struct NSQMessage *msg, void *processor));
+    void (*msg_callback)(struct NSQReader *rdr, struct NSQDConnection *conn, struct NSQMessage *msg, void *ctx));
 void free_nsq_reader(struct NSQReader *rdr);
 int nsq_reader_connect_to_nsqd(struct NSQReader *rdr, const char *address, int port);
 int nsq_reader_add_nsqlookupd_endpoint(struct NSQReader *rdr, const char *address, int port);
