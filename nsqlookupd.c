@@ -85,7 +85,7 @@ struct NSQLookupdEndpoint *new_nsqlookupd_endpoint(const char *address, int port
 {
     struct NSQLookupdEndpoint *nsqlookupd_endpoint;
 
-    nsqlookupd_endpoint = malloc(sizeof(struct NSQLookupdEndpoint));
+    nsqlookupd_endpoint = (struct NSQLookupdEndpoint *)malloc(sizeof(struct NSQLookupdEndpoint));
     nsqlookupd_endpoint->address = strdup(address);
     nsqlookupd_endpoint->port = port;
     nsqlookupd_endpoint->next = NULL;

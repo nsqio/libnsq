@@ -16,7 +16,8 @@ static void nsqd_connection_connect_cb(struct BufferedSocket *buffsock, void *ar
     _DEBUG("%s: %p\n", __FUNCTION__, arg);
 
     // send magic
-    buffered_socket_write(conn->bs, "  V2", 4);
+    char buff[10] = "  V2";
+    buffered_socket_write(conn->bs, (void *)buff, 4);
 
     if (conn->connect_callback) {
         conn->connect_callback(conn, conn->arg);
@@ -104,7 +105,7 @@ struct NSQDConnection *new_nsqd_connection(struct ev_loop *loop, const char *add
 {
     struct NSQDConnection *conn;
 
-    conn = malloc(sizeof(struct NSQDConnection));
+    conn = (struct NSQDConnection *)malloc(sizeof(struct NSQDConnection));
     conn->command_buf = new_buffer(4096, 4096);
     conn->current_msg_size = 0;
     conn->connect_callback = connect_callback;

@@ -36,7 +36,8 @@ static void nsq_reader_msg_cb(struct NSQDConnection *conn, struct NSQMessage *ms
     _DEBUG("%s: %p %p\n", __FUNCTION__, msg, rdr);
 
     if (rdr->msg_callback) {
-        rdr->msg_callback(rdr, conn, msg);
+        msg->id[sizeof(msg->id)-1] = '\0';
+        rdr->msg_callback(rdr, conn, msg, rdr->ctx);
     }
 }
 
@@ -86,20 +87,21 @@ static void nsq_reader_lookupd_poll_cb(EV_P_ struct ev_timer *w, int revents)
     ev_timer_again(rdr->loop, &rdr->lookupd_poll_timer);
 }
 
-struct NSQReader *new_nsq_reader(struct ev_loop *loop, const char *topic, const char *channel,
+struct NSQReader *new_nsq_reader(struct ev_loop *loop, const char *topic, const char *channel, void *ctx,
     void (*connect_callback)(struct NSQReader *rdr, struct NSQDConnection *conn),
     void (*close_callback)(struct NSQReader *rdr, struct NSQDConnection *conn),
-    void (*msg_callback)(struct NSQReader *rdr, struct NSQDConnection *conn, struct NSQMessage *msg))
+    void (*msg_callback)(struct NSQReader *rdr, struct NSQDConnection *conn, struct NSQMessage *msg, void *ctx))
 {
     struct NSQReader *rdr;
 
-    rdr = malloc(sizeof(struct NSQReader));
+    rdr = (struct NSQReader *)malloc(sizeof(struct NSQReader));
     rdr->topic = strdup(topic);
     rdr->channel = strdup(channel);
     rdr->max_in_flight = 1;
     rdr->connect_callback = connect_callback;
     rdr->close_callback = close_callback;
     rdr->msg_callback = msg_callback;
+    rdr->ctx = ctx;
     rdr->conns = NULL;
     rdr->lookupd = NULL;
     rdr->loop = loop;
