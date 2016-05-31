@@ -8,6 +8,14 @@
 #define _DEBUG(...) do {;} while (0)
 #endif
 
+#define DEFAULT_LOOKUPD_INTERVAL     5.
+#define DEFAULT_COMMAND_BUF_LEN      4096
+#define DEFAULT_COMMAND_BUF_CAPACITY 4096
+#define DEFAULT_READ_BUF_LEN         16 * 1024
+#define DEFAULT_READ_BUF_CAPACITY    16 * 1024
+#define DEFAULT_WRITE_BUF_LEN        16 * 1024
+#define DEFAULT_WRITE_BUF_CAPACITY   16 * 1024
+
 static void nsq_reader_connect_cb(struct NSQDConnection *conn, void *arg)
 {
     struct NSQReader *rdr = (struct NSQReader *)arg;
@@ -53,10 +61,28 @@ static void nsq_reader_close_cb(struct NSQDConnection *conn, void *arg)
 
     LL_DELETE(rdr->conns, conn);
 
-    free_nsqd_connection(conn);
+    // There is no lookupd, try to reconnect to nsqd directly
+    if (rdr->lookupd == NULL) {
+        ev_timer_again(conn->loop, conn->reconnect_timer);
+    } else {
+        free_nsqd_connection(conn);
+    }
 }
 
 void nsq_lookupd_request_cb(struct HttpRequest *req, struct HttpResponse *resp, void *arg);
+
+static void nsq_reader_reconnect_cb(EV_P_ struct ev_timer *w, int revents)
+{
+    struct NSQDConnection *conn = (struct NSQDConnection *)w->data;
+    struct NSQReader *rdr = (struct NSQReader *)conn->arg;
+
+    if (rdr->lookupd == NULL) {
+        _DEBUG("%s: There is no lookupd, try to reconnect to nsqd directly\n", __FUNCTION__);
+        nsq_reader_connect_to_nsqd(rdr, conn->address, conn->port);
+    }
+
+    free_nsqd_connection(conn);
+}
 
 static void nsq_reader_lookupd_poll_cb(EV_P_ struct ev_timer *w, int revents)
 {
@@ -88,6 +114,7 @@ static void nsq_reader_lookupd_poll_cb(EV_P_ struct ev_timer *w, int revents)
 }
 
 struct NSQReader *new_nsq_reader(struct ev_loop *loop, const char *topic, const char *channel, void *ctx,
+    struct NSQReaderCfg *cfg,
     void (*connect_callback)(struct NSQReader *rdr, struct NSQDConnection *conn),
     void (*close_callback)(struct NSQReader *rdr, struct NSQDConnection *conn),
     void (*msg_callback)(struct NSQReader *rdr, struct NSQDConnection *conn, struct NSQMessage *msg, void *ctx))
@@ -95,6 +122,24 @@ struct NSQReader *new_nsq_reader(struct ev_loop *loop, const char *topic, const 
     struct NSQReader *rdr;
 
     rdr = (struct NSQReader *)malloc(sizeof(struct NSQReader));
+    rdr->cfg = (struct NSQReaderCfg *)malloc(sizeof(struct NSQReaderCfg));
+    if (cfg == NULL) {
+        rdr->cfg->lookupd_interval     = DEFAULT_LOOKUPD_INTERVAL;
+        rdr->cfg->command_buf_len      = DEFAULT_COMMAND_BUF_LEN;
+        rdr->cfg->command_buf_capacity = DEFAULT_COMMAND_BUF_CAPACITY;
+        rdr->cfg->read_buf_len         = DEFAULT_READ_BUF_LEN;
+        rdr->cfg->read_buf_capacity    = DEFAULT_READ_BUF_CAPACITY;
+        rdr->cfg->write_buf_len        = DEFAULT_WRITE_BUF_LEN;
+        rdr->cfg->write_buf_capacity   = DEFAULT_WRITE_BUF_CAPACITY;
+    } else {
+        rdr->cfg->lookupd_interval     = cfg->lookupd_interval     <= 0 ? DEFAULT_LOOKUPD_INTERVAL     : cfg->lookupd_interval;
+        rdr->cfg->command_buf_len      = cfg->command_buf_len      <= 0 ? DEFAULT_COMMAND_BUF_LEN      : cfg->command_buf_len;
+        rdr->cfg->command_buf_capacity = cfg->command_buf_capacity <= 0 ? DEFAULT_COMMAND_BUF_CAPACITY : cfg->command_buf_capacity;
+        rdr->cfg->read_buf_len         = cfg->read_buf_len         <= 0 ? DEFAULT_READ_BUF_LEN         : cfg->read_buf_len;
+        rdr->cfg->read_buf_capacity    = cfg->read_buf_capacity    <= 0 ? DEFAULT_READ_BUF_CAPACITY    : cfg->read_buf_capacity;
+        rdr->cfg->write_buf_len        = cfg->write_buf_len        <= 0 ? DEFAULT_WRITE_BUF_LEN        : cfg->write_buf_len;
+        rdr->cfg->write_buf_capacity   = cfg->write_buf_capacity   <= 0 ? DEFAULT_WRITE_BUF_CAPACITY   : cfg->write_buf_capacity;
+    }
     rdr->topic = strdup(topic);
     rdr->channel = strdup(channel);
     rdr->max_in_flight = 1;
@@ -107,11 +152,6 @@ struct NSQReader *new_nsq_reader(struct ev_loop *loop, const char *topic, const 
     rdr->loop = loop;
 
     rdr->httpc = new_http_client(rdr->loop);
-
-    // TODO: configurable interval
-    ev_timer_init(&rdr->lookupd_poll_timer, nsq_reader_lookupd_poll_cb, 0., 5.);
-    rdr->lookupd_poll_timer.data = rdr;
-    ev_timer_again(rdr->loop, &rdr->lookupd_poll_timer);
 
     return rdr;
 }
@@ -132,6 +172,7 @@ void free_nsq_reader(struct NSQReader *rdr)
         }
         free(rdr->topic);
         free(rdr->channel);
+        free(rdr->cfg);
         free(rdr);
     }
 }
@@ -139,6 +180,18 @@ void free_nsq_reader(struct NSQReader *rdr)
 int nsq_reader_add_nsqlookupd_endpoint(struct NSQReader *rdr, const char *address, int port)
 {
     struct NSQLookupdEndpoint *nsqlookupd_endpoint;
+    struct NSQDConnection *conn;
+
+    if (rdr->lookupd == NULL) {
+        // Stop reconnect timers, use lookupd timer instead
+        LL_FOREACH(rdr->conns, conn) {
+            nsqd_connection_stop_timer(conn);
+        }
+
+        ev_timer_init(&rdr->lookupd_poll_timer, nsq_reader_lookupd_poll_cb, 0., rdr->cfg->lookupd_interval);
+        rdr->lookupd_poll_timer.data = rdr;
+        ev_timer_again(rdr->loop, &rdr->lookupd_poll_timer);
+    }
 
     nsqlookupd_endpoint = new_nsqlookupd_endpoint(address, port);
     LL_APPEND(rdr->lookupd, nsqlookupd_endpoint);
@@ -157,6 +210,11 @@ int nsq_reader_connect_to_nsqd(struct NSQReader *rdr, const char *address, int p
     if (rc > 0) {
         LL_APPEND(rdr->conns, conn);
     }
+
+    if (rdr->lookupd == NULL) {
+        nsqd_connection_init_timer(conn, nsq_reader_reconnect_cb);
+    }
+
     return rc;
 }
 

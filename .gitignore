@@ -1,4 +1,6 @@
 libnsq.a
 test
+test-nsqd
+test-lookupd
 *.o
 *.dSYM

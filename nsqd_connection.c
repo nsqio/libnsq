@@ -103,9 +103,12 @@ struct NSQDConnection *new_nsqd_connection(struct ev_loop *loop, const char *add
     void *arg)
 {
     struct NSQDConnection *conn;
+    struct NSQReader *rdr = (struct NSQReader *)arg;
 
     conn = (struct NSQDConnection *)malloc(sizeof(struct NSQDConnection));
-    conn->command_buf = new_buffer(4096, 4096);
+    conn->address = strdup(address);
+    conn->port = port;
+    conn->command_buf = new_buffer(rdr->cfg->command_buf_len, rdr->cfg->command_buf_capacity);
     conn->current_msg_size = 0;
     conn->connect_callback = connect_callback;
     conn->close_callback = close_callback;
@@ -114,6 +117,8 @@ struct NSQDConnection *new_nsqd_connection(struct ev_loop *loop, const char *add
     conn->loop = loop;
 
     conn->bs = new_buffered_socket(loop, address, port,
+        rdr->cfg->read_buf_len, rdr->cfg->read_buf_capacity,
+        rdr->cfg->write_buf_len, rdr->cfg->write_buf_capacity,
         nsqd_connection_connect_cb, nsqd_connection_close_cb,
         NULL, NULL, nsqd_connection_error_cb,
         conn);
@@ -124,6 +129,8 @@ struct NSQDConnection *new_nsqd_connection(struct ev_loop *loop, const char *add
 void free_nsqd_connection(struct NSQDConnection *conn)
 {
     if (conn) {
+        nsqd_connection_stop_timer(conn);
+        free(conn->address);
         free_buffer(conn->command_buf);
         free_buffered_socket(conn->bs);
         free(conn);
@@ -138,4 +145,21 @@ int nsqd_connection_connect(struct NSQDConnection *conn)
 void nsqd_connection_disconnect(struct NSQDConnection *conn)
 {
     buffered_socket_close(conn->bs);
+}
+
+void nsqd_connection_init_timer(struct NSQDConnection *conn,
+        void (*reconnect_callback)(EV_P_ ev_timer *w, int revents))
+{
+    struct NSQReader *rdr = (struct NSQReader *)conn->arg;
+    conn->reconnect_timer = (ev_timer *)malloc(sizeof(ev_timer));
+    ev_timer_init(conn->reconnect_timer, reconnect_callback, rdr->cfg->lookupd_interval, rdr->cfg->lookupd_interval);
+    conn->reconnect_timer->data = conn;
+}
+
+void nsqd_connection_stop_timer(struct NSQDConnection *conn)
+{
+    if (conn && conn->reconnect_timer) {
+        ev_timer_stop(conn->loop, conn->reconnect_timer);
+        free(conn->reconnect_timer);
+    }
 }
