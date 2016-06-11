@@ -14,11 +14,22 @@ TODO:
  * feature negotiation
  * better abstractions for responding to messages in your handlers
 
+### Build
+
+`libnsq` depends on `json-c` by default, but you can choose `jansson` for replacement.
+
+```sh
+WITH_JANSSON=1 make
+```
+
 ### Dependencies
 
  * [libev][2]
  * [libevbuffsock][3]
+ * [json-c][4] or [jansson][5]
 
 [1]: https://github.com/bitly/nsq
 [2]: http://software.schmorp.de/pkg/libev
 [3]: https://github.com/mreiferson/libevbuffsock
+[4]: https://github.com/json-c/json-c
+[5]: http://www.digip.org/jansson/
