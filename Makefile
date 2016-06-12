@@ -27,13 +27,21 @@ libnsq.a: command.o reader.o nsqd_connection.o http.o message.o nsqlookupd.o jso
 	$(AR) $(AR_FLAGS) $@ $^
 	$(RANLIB) $@
 
-test: test.o libnsq.a
+test: test-nsqd test-lookupd
+
+test-nsqd.o: test.c
+	$(CC) -o $@ -c $< $(CFLAGS) -DNSQD_STANDALONE
+
+test-nsqd: test-nsqd.o libnsq.a
+	$(CC) -o $@ $^ $(LIBS)
+
+test-lookupd: test.o libnsq.a
 	$(CC) -o $@ $^ $(LIBS)
 
 clean:
-	rm -rf libnsq.a test test.dSYM *.o
+	rm -rf libnsq.a test-nsqd test-lookupd test.dSYM *.o
 
-.PHONY: install clean all
+.PHONY: install clean all test
 
 install:
 	install -m 755 -d ${DESTDIR}${INCDIR}
