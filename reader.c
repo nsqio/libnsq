@@ -95,6 +95,9 @@ static void nsq_reader_lookupd_poll_cb(EV_P_ struct ev_timer *w, int revents)
     LL_FOREACH(rdr->lookupd, nsqlookupd_endpoint) {
         count++;
     }
+    if(count == 0) {
+        goto end;
+    }
     idx = rand() % count;
 
     _DEBUG("%s: rdr %p (chose %d)\n", __FUNCTION__, rdr, idx);
@@ -110,6 +113,7 @@ static void nsq_reader_lookupd_poll_cb(EV_P_ struct ev_timer *w, int revents)
         }
     }
 
+end:
     ev_timer_again(rdr->loop, &rdr->lookupd_poll_timer);
 }
 
