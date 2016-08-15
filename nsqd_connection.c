@@ -115,6 +115,7 @@ struct NSQDConnection *new_nsqd_connection(struct ev_loop *loop, const char *add
     conn->msg_callback = msg_callback;
     conn->arg = arg;
     conn->loop = loop;
+    conn->reconnect_timer = NULL;
 
     conn->bs = new_buffered_socket(loop, address, port,
         rdr->cfg->read_buf_len, rdr->cfg->read_buf_capacity,
