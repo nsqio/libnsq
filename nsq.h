@@ -75,7 +75,7 @@ struct NSQDConnection *new_nsqd_connection(struct ev_loop *loop, const char *add
     void (*close_callback)(struct NSQDConnection *conn, void *arg),
     void (*msg_callback)(struct NSQDConnection *conn, struct NSQMessage *msg, void *arg),
     void *arg);
-void free_nsqd_connection(struct NSQDConnection *conn);
+void free_nsqd_connection(struct NSQDConnection *conn, int stoptimer);
 int nsqd_connection_connect(struct NSQDConnection *conn);
 void nsqd_connection_disconnect(struct NSQDConnection *conn);
 

@@ -126,10 +126,12 @@ struct NSQDConnection *new_nsqd_connection(struct ev_loop *loop, const char *add
     return conn;
 }
 
-void free_nsqd_connection(struct NSQDConnection *conn)
+void free_nsqd_connection(struct NSQDConnection *conn, int stoptimer)
 {
     if (conn) {
-        nsqd_connection_stop_timer(conn);
+        if (stoptimer) {
+            nsqd_connection_stop_timer(conn);
+        }
         free(conn->address);
         free_buffer(conn->command_buf);
         free_buffered_socket(conn->bs);
