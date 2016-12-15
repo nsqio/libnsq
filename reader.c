@@ -65,7 +65,7 @@ static void nsq_reader_close_cb(struct NSQDConnection *conn, void *arg)
     if (rdr->lookupd == NULL) {
         ev_timer_again(conn->loop, conn->reconnect_timer);
     } else {
-        free_nsqd_connection(conn);
+        free_nsqd_connection(conn, 0);
     }
 }
 
@@ -81,7 +81,7 @@ static void nsq_reader_reconnect_cb(EV_P_ struct ev_timer *w, int revents)
         nsq_reader_connect_to_nsqd(rdr, conn->address, conn->port);
     }
 
-    free_nsqd_connection(conn);
+    free_nsqd_connection(conn, 1);
 }
 
 static void nsq_reader_lookupd_poll_cb(EV_P_ struct ev_timer *w, int revents)
