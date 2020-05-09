@@ -1,17 +1,12 @@
-#include "nsq.h"
-#include "http.h"
+#include <evbuffsock.h>
 
-#ifdef DEBUG
-#define _DEBUG(...) fprintf(stdout, __VA_ARGS__)
-#else
-#define _DEBUG(...) do {;} while (0)
-#endif
+#include "http.h"
 
 static void timer_cb(EV_P_ struct ev_timer *w, int revents);
 
 static int multi_timer_cb(CURLM *multi, long timeout_ms, void *arg)
 {
-    struct HttpClient *httpc = (struct HttpClient *)arg;
+    httpClient *httpc = (httpClient *)arg;
 
     ev_timer_stop(httpc->loop, &httpc->timer_event);
     if (timeout_ms > 0) {
@@ -25,14 +20,14 @@ static int multi_timer_cb(CURLM *multi, long timeout_ms, void *arg)
     return 0;
 }
 
-static void check_multi_info(struct HttpClient *httpc)
+static void check_multi_info(httpClient *httpc)
 {
     char *eff_url;
     CURLMsg *msg;
     int msgs_left;
     int status_code;
-    struct HttpRequest *req;
-    struct HttpResponse *resp;
+    httpRequest *req;
+    httpResponse *resp;
     CURL *easy;
 
     while ((msg = curl_multi_info_read(httpc->multi, &msgs_left))) {
@@ -51,7 +46,7 @@ static void check_multi_info(struct HttpClient *httpc)
 
 static size_t write_cb(char *ptr, size_t size, size_t nmemb, void *arg)
 {
-    struct HttpRequest *req = (struct HttpRequest *)arg;
+    httpRequest *req = (httpRequest *)arg;
     size_t realsize = size * nmemb;
 
     buffer_add(req->data, ptr, realsize);
@@ -61,7 +56,7 @@ static size_t write_cb(char *ptr, size_t size, size_t nmemb, void *arg)
 
 static void event_cb(EV_P_ struct ev_io *w, int revents)
 {
-    struct HttpClient *httpc = (struct HttpClient *)w->data;
+    httpClient *httpc = (httpClient *)w->data;
     CURLMcode rc;
     int action = (revents & EV_READ ? CURL_POLL_IN : 0) | (revents & EV_WRITE ? CURL_POLL_OUT : 0);
 
@@ -74,7 +69,7 @@ static void event_cb(EV_P_ struct ev_io *w, int revents)
 
 static void timer_cb(EV_P_ struct ev_timer *w, int revents)
 {
-    struct HttpClient *httpc = (struct HttpClient *)w->data;
+    httpClient *httpc = (httpClient *)w->data;
     CURLMcode rc;
 
     rc = curl_multi_socket_action(httpc->multi, CURL_SOCKET_TIMEOUT, 0, &httpc->still_running);
@@ -86,8 +81,8 @@ static void timer_cb(EV_P_ struct ev_timer *w, int revents)
 
 static int sock_cb(CURL *e, curl_socket_t s, int what, void *arg, void *sock_arg)
 {
-    struct HttpClient *httpc = (struct HttpClient *)arg;
-    struct HttpSocket *sock = (struct HttpSocket *)sock_arg;
+    httpClient *httpc = (httpClient *)arg;
+    httpSocket *sock = (httpSocket *)sock_arg;
     int kind = (what & CURL_POLL_IN ? EV_READ : 0) | (what & CURL_POLL_OUT ? EV_WRITE : 0);
 
     if (what == CURL_POLL_REMOVE) {
@@ -100,7 +95,7 @@ static int sock_cb(CURL *e, curl_socket_t s, int what, void *arg, void *sock_arg
     } else {
         int with_new = 0;
         if (!sock) {
-            sock = (struct HttpSocket *)calloc(1, sizeof(struct HttpSocket));
+            sock = (httpSocket *)calloc(1, sizeof(httpSocket));
             with_new = 1;
         }
 
@@ -124,11 +119,11 @@ static int sock_cb(CURL *e, curl_socket_t s, int what, void *arg, void *sock_arg
     return 0;
 }
 
-struct HttpClient *new_http_client(struct ev_loop *loop)
+httpClient *new_http_client(struct ev_loop *loop)
 {
-    struct HttpClient *httpc;
+    httpClient *httpc;
 
-    httpc = (struct HttpClient *)malloc(sizeof(struct HttpClient));
+    httpc = (httpClient *)malloc(sizeof(httpClient));
     httpc->loop = loop;
     httpc->multi = curl_multi_init();
     ev_timer_init(&httpc->timer_event, timer_cb, 0., 0.);
@@ -141,7 +136,7 @@ struct HttpClient *new_http_client(struct ev_loop *loop)
     return httpc;
 }
 
-void free_http_client(struct HttpClient *httpc)
+void free_http_client(httpClient *httpc)
 {
     if (httpc) {
         curl_multi_cleanup(httpc->multi);
@@ -150,12 +145,12 @@ void free_http_client(struct HttpClient *httpc)
     }
 }
 
-struct HttpRequest *new_http_request(const char *url,
-    void (*callback)(struct HttpRequest *req, struct HttpResponse *resp, void *arg), void *cb_arg)
+httpRequest *new_http_request(const char *url,
+    void (*callback)(httpRequest *req, httpResponse *resp, void *arg), void *cb_arg)
 {
-    struct HttpRequest *req;
+    httpRequest *req;
 
-    req = (struct HttpRequest *)calloc(1, sizeof(struct HttpRequest));
+    req = (httpRequest *)calloc(1, sizeof(httpRequest));
     req->data = new_buffer(4096, 0);
     req->easy = curl_easy_init();
     if (!req->easy) {
@@ -176,7 +171,7 @@ struct HttpRequest *new_http_request(const char *url,
     return req;
 }
 
-void free_http_request(struct HttpRequest *req)
+void free_http_request(httpRequest *req)
 {
     if (req) {
         curl_multi_remove_handle(req->httpc->multi, req->easy);
@@ -187,25 +182,25 @@ void free_http_request(struct HttpRequest *req)
     }
 }
 
-struct HttpResponse *new_http_response(int status_code, void *data)
+httpResponse *new_http_response(int status_code, void *data)
 {
-    struct HttpResponse *resp;
+    httpResponse *resp;
 
-    resp = (struct HttpResponse *)malloc(sizeof(struct HttpResponse));
+    resp = (httpResponse *)malloc(sizeof(httpResponse));
     resp->status_code = status_code;
     resp->data = data;
 
     return resp;
 }
 
-void free_http_response(struct HttpResponse *resp)
+void free_http_response(httpResponse *resp)
 {
     if (resp) {
         free(resp);
     }
 }
 
-int http_client_get(struct HttpClient *httpc, struct HttpRequest *req)
+int http_client_get(httpClient *httpc, httpRequest *req)
 {
     CURLMcode rc;
 

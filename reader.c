@@ -1,12 +1,8 @@
+#include <time.h>
+
+#include "http.h"
 #include "nsq.h"
 #include "utlist.h"
-#include "http.h"
-
-#ifdef DEBUG
-#define _DEBUG(...) fprintf(stdout, __VA_ARGS__)
-#else
-#define _DEBUG(...) do {;} while (0)
-#endif
 
 #define DEFAULT_LOOKUPD_INTERVAL     5.
 #define DEFAULT_COMMAND_BUF_LEN      4096
@@ -16,9 +12,9 @@
 #define DEFAULT_WRITE_BUF_LEN        16 * 1024
 #define DEFAULT_WRITE_BUF_CAPACITY   16 * 1024
 
-static void nsq_reader_connect_cb(struct NSQDConnection *conn, void *arg)
+static void nsq_reader_connect_cb(nsqdConn *conn, void *arg)
 {
-    struct NSQReader *rdr = (struct NSQReader *)arg;
+    nsqRdr *rdr = (nsqRdr *)arg;
 
     _DEBUG("%s: %p\n", __FUNCTION__, rdr);
 
@@ -37,9 +33,9 @@ static void nsq_reader_connect_cb(struct NSQDConnection *conn, void *arg)
     buffered_socket_write_buffer(conn->bs, conn->command_buf);
 }
 
-static void nsq_reader_msg_cb(struct NSQDConnection *conn, struct NSQMessage *msg, void *arg)
+static void nsq_reader_msg_cb(nsqdConn *conn, nsqMsg *msg, void *arg)
 {
-    struct NSQReader *rdr = (struct NSQReader *)arg;
+    nsqRdr *rdr = (nsqRdr *)arg;
 
     _DEBUG("%s: %p %p\n", __FUNCTION__, msg, rdr);
 
@@ -49,9 +45,9 @@ static void nsq_reader_msg_cb(struct NSQDConnection *conn, struct NSQMessage *ms
     }
 }
 
-static void nsq_reader_close_cb(struct NSQDConnection *conn, void *arg)
+static void nsq_reader_close_cb(nsqdConn *conn, void *arg)
 {
-    struct NSQReader *rdr = (struct NSQReader *)arg;
+    nsqRdr *rdr = (nsqRdr *)arg;
 
     _DEBUG("%s: %p\n", __FUNCTION__, rdr);
 
@@ -69,12 +65,12 @@ static void nsq_reader_close_cb(struct NSQDConnection *conn, void *arg)
     }
 }
 
-void nsq_lookupd_request_cb(struct HttpRequest *req, struct HttpResponse *resp, void *arg);
+void nsq_lookupd_request_cb(httpRequest *req, httpResponse *resp, void *arg);
 
 static void nsq_reader_reconnect_cb(EV_P_ struct ev_timer *w, int revents)
 {
-    struct NSQDConnection *conn = (struct NSQDConnection *)w->data;
-    struct NSQReader *rdr = (struct NSQReader *)conn->arg;
+    nsqdConn *conn = (nsqdConn *)w->data;
+    nsqRdr *rdr = (nsqRdr *)conn->arg;
 
     if (rdr->lookupd == NULL) {
         _DEBUG("%s: There is no lookupd, try to reconnect to nsqd directly\n", __FUNCTION__);
@@ -86,9 +82,9 @@ static void nsq_reader_reconnect_cb(EV_P_ struct ev_timer *w, int revents)
 
 static void nsq_reader_lookupd_poll_cb(EV_P_ struct ev_timer *w, int revents)
 {
-    struct NSQReader *rdr = (struct NSQReader *)w->data;
-    struct NSQLookupdEndpoint *nsqlookupd_endpoint;
-    struct HttpRequest *req;
+    nsqRdr *rdr = (nsqRdr *)w->data;
+    nsqLE *nsqlookupd_endpoint;
+    httpRequest *req;
     int i, idx, count = 0;
     char buf[256];
 
@@ -117,16 +113,16 @@ end:
     ev_timer_again(rdr->loop, &rdr->lookupd_poll_timer);
 }
 
-struct NSQReader *new_nsq_reader(struct ev_loop *loop, const char *topic, const char *channel, void *ctx,
-    struct NSQReaderCfg *cfg,
-    void (*connect_callback)(struct NSQReader *rdr, struct NSQDConnection *conn),
-    void (*close_callback)(struct NSQReader *rdr, struct NSQDConnection *conn),
-    void (*msg_callback)(struct NSQReader *rdr, struct NSQDConnection *conn, struct NSQMessage *msg, void *ctx))
+nsqRdr *new_nsq_reader(struct ev_loop *loop, const char *topic, const char *channel, void *ctx,
+    nsqRdrCfg *cfg,
+    void (*connect_callback)(nsqRdr *rdr, nsqdConn *conn),
+    void (*close_callback)(nsqRdr *rdr, nsqdConn *conn),
+    void (*msg_callback)(nsqRdr *rdr, nsqdConn *conn, nsqMsg *msg, void *ctx))
 {
-    struct NSQReader *rdr;
+    nsqRdr *rdr;
 
-    rdr = (struct NSQReader *)malloc(sizeof(struct NSQReader));
-    rdr->cfg = (struct NSQReaderCfg *)malloc(sizeof(struct NSQReaderCfg));
+    rdr = (nsqRdr *)malloc(sizeof(nsqRdr));
+    rdr->cfg = (nsqRdrCfg *)malloc(sizeof(nsqRdrCfg));
     if (cfg == NULL) {
         rdr->cfg->lookupd_interval     = DEFAULT_LOOKUPD_INTERVAL;
         rdr->cfg->command_buf_len      = DEFAULT_COMMAND_BUF_LEN;
@@ -160,10 +156,10 @@ struct NSQReader *new_nsq_reader(struct ev_loop *loop, const char *topic, const 
     return rdr;
 }
 
-void free_nsq_reader(struct NSQReader *rdr)
+void free_nsq_reader(nsqRdr *rdr)
 {
-    struct NSQDConnection *conn;
-    struct NSQLookupdEndpoint *nsqlookupd_endpoint;
+    nsqdConn *conn;
+    nsqLE *nsqlookupd_endpoint;
 
     if (rdr) {
         // TODO: this should probably trigger disconnections and then keep
@@ -181,10 +177,10 @@ void free_nsq_reader(struct NSQReader *rdr)
     }
 }
 
-int nsq_reader_add_nsqlookupd_endpoint(struct NSQReader *rdr, const char *address, int port)
+int nsq_reader_add_nsqlookupd_endpoint(nsqRdr *rdr, const char *address, int port)
 {
-    struct NSQLookupdEndpoint *nsqlookupd_endpoint;
-    struct NSQDConnection *conn;
+    nsqLE *nsqlookupd_endpoint;
+    nsqdConn *conn;
 
     if (rdr->lookupd == NULL) {
         // Stop reconnect timers, use lookupd timer instead
@@ -203,9 +199,9 @@ int nsq_reader_add_nsqlookupd_endpoint(struct NSQReader *rdr, const char *addres
     return 1;
 }
 
-int nsq_reader_connect_to_nsqd(struct NSQReader *rdr, const char *address, int port)
+int nsq_reader_connect_to_nsqd(nsqRdr *rdr, const char *address, int port)
 {
-    struct NSQDConnection *conn;
+    nsqdConn *conn;
     int rc;
 
     conn = new_nsqd_connection(rdr->loop, address, port,
@@ -224,6 +220,6 @@ int nsq_reader_connect_to_nsqd(struct NSQReader *rdr, const char *address, int p
 
 void nsq_run(struct ev_loop *loop)
 {
-    srand(time(NULL));
+    srand((unsigned)time(NULL));
     ev_loop(loop, 0);
 }

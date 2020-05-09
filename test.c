@@ -1,12 +1,6 @@
 #include "nsq.h"
 
-#ifdef DEBUG
-#define _DEBUG(...) fprintf(stdout, __VA_ARGS__)
-#else
-#define _DEBUG(...) do {;} while (0)
-#endif
-
-static void message_handler(struct NSQReader *rdr, struct NSQDConnection *conn, struct NSQMessage *msg, void *ctx)
+static void message_handler(nsqRdr *rdr, nsqdConn *conn, nsqMsg *msg, void *ctx)
 {
     _DEBUG("%s: %lld, %d, %s, %lu, %.*s\n", __FUNCTION__, msg->timestamp, msg->attempts, msg->id,
         msg->body_length, (int)msg->body_length, msg->body);
@@ -32,18 +26,22 @@ static void message_handler(struct NSQReader *rdr, struct NSQDConnection *conn, 
 
 int main(int argc, char **argv)
 {
-    struct NSQReader *rdr;
+    if (argc < 4) {
+        printf("not enough args from command line\n");
+        return 1;
+    }
+    nsqRdr *rdr;
     struct ev_loop *loop;
     void *ctx = NULL; //(void *)(new TestNsqMsgContext());
 
     loop = ev_default_loop(0);
-    rdr = new_nsq_reader(loop, "test", "ch", (void *)ctx,
-        NULL, NULL, NULL, message_handler);
+    rdr = new_nsq_reader(loop, argv[2], argv[3], ctx, NULL, NULL, NULL, message_handler);
+
 #ifdef NSQD_STANDALONE
-    nsq_reader_connect_to_nsqd(rdr, "127.0.0.1", 4150);
-    nsq_reader_connect_to_nsqd(rdr, "127.0.0.1", 14150);
+    nsq_reader_connect_to_nsqd(rdr, argv[1], 4150);
+//    nsq_reader_connect_to_nsqd(rdr, "127.0.0.1", 14150);
 #else
-    nsq_reader_add_nsqlookupd_endpoint(rdr, "127.0.0.1", 4161);
+    nsq_reader_add_nsqlookupd_endpoint(rdr, argv[1], 4161);
 #endif
     nsq_run(loop);
 

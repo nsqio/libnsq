@@ -35,7 +35,7 @@ test-nsqd.o: test.c
 test-nsqd: test-nsqd.o libnsq.a
 	$(CC) -o $@ $^ $(LIBS)
 
-test-lookupd: test.o libnsq.a
+test-lookupd: test-nsqd.o libnsq.a
 	$(CC) -o $@ $^ $(LIBS)
 
 clean:

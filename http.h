@@ -4,19 +4,19 @@
 #include <ev.h>
 #include <curl/curl.h>
 
-struct HttpClient {
+typedef struct HttpClient {
     CURLM *multi;
     struct ev_loop *loop;
     struct ev_timer timer_event;
     int still_running;
-};
+} httpClient;
 
-struct HttpResponse {
+typedef struct HttpResponse {
     int status_code;
     struct Buffer *data;
-};
+} httpResponse;
 
-struct HttpRequest {
+typedef struct HttpRequest {
     CURL *easy;
     char *url;
     struct HttpClient *httpc;
@@ -24,9 +24,9 @@ struct HttpRequest {
     struct Buffer *data;
     void (*callback)(struct HttpRequest *req, struct HttpResponse *resp, void *arg);
     void *cb_arg;
-};
+} httpRequest;
 
-struct HttpSocket {
+typedef struct HttpSocket {
     curl_socket_t sockfd;
     CURL *easy;
     int action;
@@ -34,7 +34,7 @@ struct HttpSocket {
     struct ev_io ev;
     int evset;
     struct HttpClient *httpc;
-};
+} httpSocket;
 
 struct HttpClient *new_http_client(struct ev_loop *loop);
 void free_http_client(struct HttpClient *httpc);
