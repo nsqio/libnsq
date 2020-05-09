@@ -4,3 +4,4 @@ test-nsqd
 test-lookupd
 *.o
 *.dSYM
+.DS_Store

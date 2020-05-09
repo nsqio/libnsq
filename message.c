@@ -1,11 +1,5 @@
 #include "nsq.h"
 
-#ifdef DEBUG
-#define _DEBUG(...) fprintf(stdout, __VA_ARGS__)
-#else
-#define _DEBUG(...) do {;} while (0)
-#endif
-
 uint64_t ntoh64(const uint8_t *data) {
     return (uint64_t)(data[7]) | (uint64_t)(data[6])<<8 |
         (uint64_t)(data[5])<<16 | (uint64_t)(data[4])<<24 |
@@ -13,12 +7,12 @@ uint64_t ntoh64(const uint8_t *data) {
         (uint64_t)(data[1])<<48 | (uint64_t)(data[0])<<56;
 }
 
-struct NSQMessage *nsq_decode_message(const char *data, size_t data_length)
+nsqMsg *nsq_decode_message(const char *data, size_t data_length)
 {
-    struct NSQMessage *msg;
+    nsqMsg *msg;
     size_t body_length;
 
-    msg = (struct NSQMessage *)malloc(sizeof(struct NSQMessage));
+    msg = (nsqMsg *)malloc(sizeof(nsqMsg));
     msg->timestamp = (int64_t)ntoh64((uint8_t *)data);
     msg->attempts = ntohs(*(uint16_t *)(data+8));
     memcpy(&msg->id, data+10, 16);
@@ -30,7 +24,7 @@ struct NSQMessage *nsq_decode_message(const char *data, size_t data_length)
     return msg;
 }
 
-void free_nsq_message(struct NSQMessage *msg)
+void free_nsq_message(nsqMsg *msg)
 {
     if (msg) {
         free(msg->body);

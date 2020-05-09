@@ -1,17 +1,11 @@
 #include "nsq.h"
 
-#ifdef DEBUG
-#define _DEBUG(...) fprintf(stdout, __VA_ARGS__)
-#else
-#define _DEBUG(...) do {;} while (0)
-#endif
+static void nsqd_connection_read_size(nsqBufdSock *buffsock, void *arg);
+static void nsqd_connection_read_data(nsqBufdSock *buffsock, void *arg);
 
-static void nsqd_connection_read_size(struct BufferedSocket *buffsock, void *arg);
-static void nsqd_connection_read_data(struct BufferedSocket *buffsock, void *arg);
-
-static void nsqd_connection_connect_cb(struct BufferedSocket *buffsock, void *arg)
+static void nsqd_connection_connect_cb(nsqBufdSock *buffsock, void *arg)
 {
-    struct NSQDConnection *conn = (struct NSQDConnection *)arg;
+    nsqdConn *conn = (nsqdConn *)arg;
 
     _DEBUG("%s: %p\n", __FUNCTION__, arg);
 
@@ -26,9 +20,9 @@ static void nsqd_connection_connect_cb(struct BufferedSocket *buffsock, void *ar
     buffered_socket_read_bytes(buffsock, 4, nsqd_connection_read_size, conn);
 }
 
-static void nsqd_connection_read_size(struct BufferedSocket *buffsock, void *arg)
+static void nsqd_connection_read_size(nsqBufdSock *buffsock, void *arg)
 {
-    struct NSQDConnection *conn = (struct NSQDConnection *)arg;
+    nsqdConn *conn = (nsqdConn *)arg;
     uint32_t *msg_size_be;
 
     _DEBUG("%s: %p\n", __FUNCTION__, arg);
@@ -44,10 +38,10 @@ static void nsqd_connection_read_size(struct BufferedSocket *buffsock, void *arg
     buffered_socket_read_bytes(buffsock, conn->current_msg_size, nsqd_connection_read_data, conn);
 }
 
-static void nsqd_connection_read_data(struct BufferedSocket *buffsock, void *arg)
+static void nsqd_connection_read_data(nsqBufdSock *buffsock, void *arg)
 {
-    struct NSQDConnection *conn = (struct NSQDConnection *)arg;
-    struct NSQMessage *msg;
+    nsqdConn *conn = (nsqdConn *)arg;
+    nsqMsg *msg;
 
     conn->current_frame_type = ntohl(*((uint32_t *)buffsock->read_buf->data));
     buffer_drain(buffsock->read_buf, 4);
@@ -78,9 +72,9 @@ static void nsqd_connection_read_data(struct BufferedSocket *buffsock, void *arg
     buffered_socket_read_bytes(buffsock, 4, nsqd_connection_read_size, conn);
 }
 
-static void nsqd_connection_close_cb(struct BufferedSocket *buffsock, void *arg)
+static void nsqd_connection_close_cb(nsqBufdSock *buffsock, void *arg)
 {
-    struct NSQDConnection *conn = (struct NSQDConnection *)arg;
+    nsqdConn *conn = (nsqdConn *)arg;
 
     _DEBUG("%s: %p\n", __FUNCTION__, arg);
 
@@ -89,23 +83,23 @@ static void nsqd_connection_close_cb(struct BufferedSocket *buffsock, void *arg)
     }
 }
 
-static void nsqd_connection_error_cb(struct BufferedSocket *buffsock, void *arg)
+static void nsqd_connection_error_cb(nsqBufdSock *buffsock, void *arg)
 {
-    struct NSQDConnection *conn = (struct NSQDConnection *)arg;
+    nsqdConn *conn = (nsqdConn *)arg;
 
     _DEBUG("%s: conn %p\n", __FUNCTION__, conn);
 }
 
-struct NSQDConnection *new_nsqd_connection(struct ev_loop *loop, const char *address, int port,
-    void (*connect_callback)(struct NSQDConnection *conn, void *arg),
-    void (*close_callback)(struct NSQDConnection *conn, void *arg),
-    void (*msg_callback)(struct NSQDConnection *conn, struct NSQMessage *msg, void *arg),
+nsqdConn *new_nsqd_connection(struct ev_loop *loop, const char *address, int port,
+    void (*connect_callback)(nsqdConn *conn, void *arg),
+    void (*close_callback)(nsqdConn *conn, void *arg),
+    void (*msg_callback)(nsqdConn *conn, nsqMsg *msg, void *arg),
     void *arg)
 {
-    struct NSQDConnection *conn;
-    struct NSQReader *rdr = (struct NSQReader *)arg;
+    nsqdConn *conn;
+    nsqRdr *rdr = (nsqRdr *)arg;
 
-    conn = (struct NSQDConnection *)malloc(sizeof(struct NSQDConnection));
+    conn = (nsqdConn *)malloc(sizeof(nsqdConn));
     conn->address = strdup(address);
     conn->port = port;
     conn->command_buf = new_buffer(rdr->cfg->command_buf_len, rdr->cfg->command_buf_capacity);
@@ -127,7 +121,7 @@ struct NSQDConnection *new_nsqd_connection(struct ev_loop *loop, const char *add
     return conn;
 }
 
-void free_nsqd_connection(struct NSQDConnection *conn)
+void free_nsqd_connection(nsqdConn *conn)
 {
     if (conn) {
         nsqd_connection_stop_timer(conn);
@@ -138,26 +132,26 @@ void free_nsqd_connection(struct NSQDConnection *conn)
     }
 }
 
-int nsqd_connection_connect(struct NSQDConnection *conn)
+int nsqd_connection_connect(nsqdConn *conn)
 {
     return buffered_socket_connect(conn->bs);
 }
 
-void nsqd_connection_disconnect(struct NSQDConnection *conn)
+void nsqd_connection_disconnect(nsqdConn *conn)
 {
     buffered_socket_close(conn->bs);
 }
 
-void nsqd_connection_init_timer(struct NSQDConnection *conn,
+void nsqd_connection_init_timer(nsqdConn *conn,
         void (*reconnect_callback)(EV_P_ ev_timer *w, int revents))
 {
-    struct NSQReader *rdr = (struct NSQReader *)conn->arg;
+    nsqRdr *rdr = (nsqRdr *)conn->arg;
     conn->reconnect_timer = (ev_timer *)malloc(sizeof(ev_timer));
     ev_timer_init(conn->reconnect_timer, reconnect_callback, rdr->cfg->lookupd_interval, rdr->cfg->lookupd_interval);
     conn->reconnect_timer->data = conn;
 }
 
-void nsqd_connection_stop_timer(struct NSQDConnection *conn)
+void nsqd_connection_stop_timer(nsqdConn *conn)
 {
     if (conn && conn->reconnect_timer) {
         ev_timer_stop(conn->loop, conn->reconnect_timer);

@@ -15,7 +15,7 @@ typedef void        nsq_json_tokener_t;
 #include <json-c/json.h>
 
 typedef struct json_object     nsq_json_t;
-typedef int                    nsq_json_size_t;
+typedef size_t                 nsq_json_size_t;
 typedef int32_t                nsq_json_int_t;
 typedef struct json_tokener    nsq_json_tokener_t;
 
