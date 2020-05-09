@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include <evbuffsock.h>
 
 #include "http.h"

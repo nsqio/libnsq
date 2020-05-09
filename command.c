@@ -5,11 +5,9 @@
 
 #include "nsq.h"
 
-const static char * NEW_LINE  = "\n";
-const static char * NEW_SPACE = " ";
-const static int MAX_BUF_SIZE = 128;
-const static int MIN_BUF_SIZE = 64;
-const static int BUF_DELTER   = 2;
+static const int MAX_BUF_SIZE = 128;
+static const int MIN_BUF_SIZE = 64;
+static const int BUF_DELTER   = 2;
 
 void *nsq_buf_malloc(size_t buf_size, size_t n, size_t l)
 {
@@ -45,8 +43,8 @@ void nsq_buffer_add(nsqBuf *buf, const char *name, const nsqCmdParams params[], 
     n += l;
 
     if (NULL != params) {
-        for (int i = 0; i < psize; i++) {
-            memcpy(b+n, NEW_SPACE, 1);
+        for (size_t i = 0; i < psize; i++) {
+            memcpy(b+n, " ", 1);
             n += 1;
 
             switch (params[i].t) {
@@ -67,7 +65,7 @@ void nsq_buffer_add(nsqBuf *buf, const char *name, const nsqCmdParams params[], 
             n += l;
         }
     }
-    memcpy(b+n, NEW_LINE, 1);
+    memcpy(b+n, "\n", 1);
     n += 1;
 
     if (NULL != body) {
@@ -158,7 +156,7 @@ void nsq_multi_publish(nsqBuf *buf, const char *topic, const char **body, const 
     };
 
     size_t s = 4;
-    for (int i = 0; i<body_size; i++) {
+    for (size_t i = 0; i<body_size; i++) {
         s += strlen(body[i])+4;
     }
     char *b = malloc(s * sizeof(char));
@@ -171,7 +169,7 @@ void nsq_multi_publish(nsqBuf *buf, const char *topic, const char **body, const 
     n += 4;
 
     size_t l = 0;
-    for (int i = 0; i < body_size; i++) {
+    for (size_t i = 0; i < body_size; i++) {
         l = strlen(body[i]);
         v = htonl((uint32_t)l);
         memcpy(b+n, &v, 4);
