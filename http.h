@@ -7,7 +7,7 @@
 typedef struct HttpClient {
     CURLM *multi;
     struct ev_loop *loop;
-    struct ev_timer timer_event;
+    struct ev_timer *timer_event;
     int still_running;
 } httpClient;
 
@@ -31,18 +31,18 @@ typedef struct HttpSocket {
     CURL *easy;
     int action;
     long timeout;
-    struct ev_io ev;
+    struct ev_io *ev;
     int evset;
     struct HttpClient *httpc;
 } httpSocket;
 
-struct HttpClient *new_http_client(struct ev_loop *loop);
-void free_http_client(struct HttpClient *httpc);
-struct HttpRequest *new_http_request(const char *url,
-    void (*callback)(struct HttpRequest *req, struct HttpResponse *resp, void *arg), void *cb_arg);
-void free_http_request(struct HttpRequest *req);
-struct HttpResponse *new_http_response(int status_code, void *data);
-void free_http_response(struct HttpResponse *resp);
-int http_client_get(struct HttpClient *httpc, struct HttpRequest *req);
+httpClient *new_http_client(struct ev_loop *loop);
+void free_http_client(httpClient *httpc);
+httpRequest *new_http_request(const char *url,
+    void (*callback)(httpRequest *req, httpResponse *resp, void *arg), void *cb_arg);
+void free_http_request(httpRequest *req);
+httpResponse *new_http_response(int status_code, void *data);
+void free_http_response(httpResponse *resp);
+int http_client_get(httpClient *httpc, httpRequest *req);
 
 #endif
