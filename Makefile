@@ -29,13 +29,13 @@ libnsq.a: command.o reader.o nsqd_connection.o http.o message.o nsqlookupd.o jso
 
 test: test-nsqd test-lookupd
 
-test-nsqd.o: test.c
+test-nsqd.o: test_sub.c
 	$(CC) -o $@ -c $< $(CFLAGS) -DNSQD_STANDALONE
 
 test-nsqd: test-nsqd.o libnsq.a
 	$(CC) -o $@ $^ $(LIBS)
 
-test-lookupd: test-nsqd.o libnsq.a
+test-lookupd: test_sub.o libnsq.a
 	$(CC) -o $@ $^ $(LIBS)
 
 clean:
