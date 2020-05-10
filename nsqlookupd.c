@@ -10,7 +10,7 @@ void nsq_lookupd_request_cb(httpRequest *req, httpResponse *resp, void *arg)
     nsq_json_tokener_t *jstok;
     nsqdConn *conn;
     const char *broadcast_address;
-    int i, found, tcp_port;
+    int found, tcp_port;
 
     _DEBUG("%s: status_code %d, body %.*s\n", __FUNCTION__, resp->status_code,
         (int)BUFFER_HAS_DATA(resp->data), resp->data->data);
@@ -45,7 +45,7 @@ void nsq_lookupd_request_cb(httpRequest *req, httpResponse *resp, void *arg)
     }
 
     _DEBUG("%s: num producers %ld\n", __FUNCTION__, (long)nsq_json_array_length(producers));
-    for (i = 0; i < nsq_json_array_length(producers); i++) {
+    for (long i = 0; i < (long)nsq_json_array_length(producers); i++) {
         producer = nsq_json_array_get(producers, i);
         nsq_json_object_get(producer, "broadcast_address", &broadcast_address_obj);
         nsq_json_object_get(producer, "tcp_port", &tcp_port_obj);

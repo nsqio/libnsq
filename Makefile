@@ -3,7 +3,8 @@ DESTDIR=
 LIBDIR=${PREFIX}/lib
 INCDIR=${PREFIX}/include
 
-CFLAGS+=-g -Wall -O2 -DDEBUG -fPIC
+CFLAGS += --std=c99 -D_XOPEN_SOURCE=600 -g -O2 -DDEBUG -fPIC
+CFLAGS += -Wall -Wextra -Wwrite-strings -Wshadow -Wno-unused-parameter
 LIBS=-lev -lcurl
 AR=ar
 AR_FLAGS=rc

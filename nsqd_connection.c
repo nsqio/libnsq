@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "nsq.h"
 
 static void nsqd_connection_read_size(nsqBufdSock *buffsock, void *arg);

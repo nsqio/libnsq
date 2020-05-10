@@ -1,5 +1,6 @@
-#include "libevbuffsock/evbuffsock.h"
+#include <string.h>
 
+#include "libevbuffsock/evbuffsock.h"
 #include "http.h"
 
 static void timer_cb(EV_P_ struct ev_timer *w, int revents);
