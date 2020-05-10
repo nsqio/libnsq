@@ -65,7 +65,7 @@ typedef struct NSQReader {
     nsqdConn *conns;
     struct NSQDConnInfo *infos;
     nsqLE *lookupd;
-    struct ev_timer lookupd_poll_timer;
+    struct ev_timer *lookupd_poll_timer;
     struct ev_loop *loop;
     nsqRdrCfg *cfg;
     void *httpc;

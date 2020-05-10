@@ -110,7 +110,7 @@ static void nsq_reader_lookupd_poll_cb(EV_P_ struct ev_timer *w, int revents)
     }
 
 end:
-    ev_timer_again(rdr->loop, &rdr->lookupd_poll_timer);
+    ev_timer_again(rdr->loop, rdr->lookupd_poll_timer);
 }
 
 nsqRdr *new_nsq_reader(struct ev_loop *loop, const char *topic, const char *channel, void *ctx,
@@ -123,6 +123,7 @@ nsqRdr *new_nsq_reader(struct ev_loop *loop, const char *topic, const char *chan
 
     rdr = (nsqRdr *)malloc(sizeof(nsqRdr));
     rdr->cfg = (nsqRdrCfg *)malloc(sizeof(nsqRdrCfg));
+    rdr->lookupd_poll_timer = malloc(sizeof(struct ev_timer));
     if (cfg == NULL) {
         rdr->cfg->lookupd_interval     = DEFAULT_LOOKUPD_INTERVAL;
         rdr->cfg->command_buf_len      = DEFAULT_COMMAND_BUF_LEN;
@@ -173,6 +174,7 @@ void free_nsq_reader(nsqRdr *rdr)
         free(rdr->topic);
         free(rdr->channel);
         free(rdr->cfg);
+        free(rdr->lookupd_poll_timer);
         free(rdr);
     }
 }
@@ -188,9 +190,9 @@ int nsq_reader_add_nsqlookupd_endpoint(nsqRdr *rdr, const char *address, int por
             nsqd_connection_stop_timer(conn);
         }
 
-        ev_timer_init(&rdr->lookupd_poll_timer, nsq_reader_lookupd_poll_cb, 0., rdr->cfg->lookupd_interval);
-        rdr->lookupd_poll_timer.data = rdr;
-        ev_timer_again(rdr->loop, &rdr->lookupd_poll_timer);
+        ev_timer_init(rdr->lookupd_poll_timer, nsq_reader_lookupd_poll_cb, 0., rdr->cfg->lookupd_interval);
+        rdr->lookupd_poll_timer->data = rdr;
+        ev_timer_again(rdr->loop, rdr->lookupd_poll_timer);
     }
 
     nsqlookupd_endpoint = new_nsqlookupd_endpoint(address, port);
