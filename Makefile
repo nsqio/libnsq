@@ -4,7 +4,7 @@ LIBDIR=${PREFIX}/lib
 INCDIR=${PREFIX}/include
 
 CFLAGS+=-g -Wall -O2 -DDEBUG -fPIC
-LIBS=-lev -levbuffsock -lcurl
+LIBS=-lev -lcurl
 AR=ar
 AR_FLAGS=rc
 RANLIB=ranlib
@@ -23,7 +23,8 @@ libnsq: libnsq.a
 %.o: %.c
 	$(CC) -o $@ -c $< $(CFLAGS)
 
-libnsq.a: command.o reader.o nsqd_connection.o http.o message.o nsqlookupd.o json.o
+libnsq.a: libevbuffsock/buffered_socket.o libevbuffsock/buffer.o command.o reader.o \
+			nsqd_connection.o http.o message.o nsqlookupd.o json.o
 	$(AR) $(AR_FLAGS) $@ $^
 	$(RANLIB) $@
 

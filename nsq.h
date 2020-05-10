@@ -2,7 +2,7 @@
 #define __nsq_h
 
 #include <ev.h>
-#include <evbuffsock.h>
+#include "libevbuffsock/evbuffsock.h"
 
 #ifdef DEBUG
 #define _DEBUG(...) fprintf(stdout, __VA_ARGS__)

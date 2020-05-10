@@ -1,0 +1,3 @@
+[submodule "libevbuffsock"]
+	path = libevbuffsock
+	url = git@github.com:mreiferson/libevbuffsock.git
