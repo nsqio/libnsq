@@ -35,7 +35,7 @@ nsq_json_t *nsq_json_loadb(const char *buf, const nsq_json_size_t buflen, const 
 #endif
 }
 
-nsq_json_size_t nsq_json_array_length(const nsq_json_t *array)
+nsq_json_size_t nsq_json_array_length(nsq_json_t *array)
 {
 #ifdef WITH_JANSSON
     return json_array_size(array);
@@ -44,7 +44,7 @@ nsq_json_size_t nsq_json_array_length(const nsq_json_t *array)
 #endif
 }
 
-nsq_json_t *nsq_json_array_get(const nsq_json_t *array, const nsq_json_size_t idx)
+nsq_json_t *nsq_json_array_get(nsq_json_t *array, const nsq_json_size_t idx)
 {
 #ifdef WITH_JANSSON
     return json_array_get(array, idx);
@@ -53,7 +53,7 @@ nsq_json_t *nsq_json_array_get(const nsq_json_t *array, const nsq_json_size_t id
 #endif
 }
 
-int nsq_json_object_get(const nsq_json_t *jsobj, const char *key, nsq_json_t **value)
+int nsq_json_object_get(nsq_json_t *jsobj, const char *key, nsq_json_t **value)
 {
 #ifdef WITH_JANSSON
     *value = json_object_get(jsobj, key);
@@ -72,7 +72,7 @@ const char *nsq_json_string_value(nsq_json_t *jsobj)
 #endif
 }
 
-nsq_json_int_t nsq_json_int_value(const nsq_json_t *jsobj)
+nsq_json_int_t nsq_json_int_value(nsq_json_t *jsobj)
 {
 #ifdef WITH_JANSSON
     return json_integer_value(jsobj);

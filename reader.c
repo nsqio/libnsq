@@ -1,4 +1,5 @@
 #include <time.h>
+#include <string.h>
 
 #include "http.h"
 #include "nsq.h"
