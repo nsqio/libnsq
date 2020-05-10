@@ -96,13 +96,13 @@ nsqdConn *new_nsqd_connection(struct ev_loop *loop, const char *address, int por
     void (*msg_callback)(nsqdConn *conn, nsqMsg *msg, void *arg),
     void *arg)
 {
+    nsqio *nio = (nsqio *)arg;
     nsqdConn *conn;
-    nsqRdr *rdr = (nsqRdr *)arg;
 
     conn = (nsqdConn *)malloc(sizeof(nsqdConn));
     conn->address = strdup(address);
     conn->port = port;
-    conn->command_buf = new_buffer(rdr->cfg->command_buf_len, rdr->cfg->command_buf_capacity);
+    conn->command_buf = new_buffer(nio->cfg->command_buf_len, nio->cfg->command_buf_capacity);
     conn->current_msg_size = 0;
     conn->connect_callback = connect_callback;
     conn->close_callback = close_callback;
@@ -112,8 +112,8 @@ nsqdConn *new_nsqd_connection(struct ev_loop *loop, const char *address, int por
     conn->reconnect_timer = NULL;
 
     conn->bs = new_buffered_socket(loop, address, port,
-        rdr->cfg->read_buf_len, rdr->cfg->read_buf_capacity,
-        rdr->cfg->write_buf_len, rdr->cfg->write_buf_capacity,
+        nio->cfg->read_buf_len, nio->cfg->read_buf_capacity,
+        nio->cfg->write_buf_len, nio->cfg->write_buf_capacity,
         nsqd_connection_connect_cb, nsqd_connection_close_cb,
         NULL, NULL, nsqd_connection_error_cb,
         conn);
@@ -145,9 +145,9 @@ void nsqd_connection_disconnect(nsqdConn *conn)
 void nsqd_connection_init_timer(nsqdConn *conn,
         void (*reconnect_callback)(EV_P_ ev_timer *w, int revents))
 {
-    nsqRdr *rdr = (nsqRdr *)conn->arg;
+    nsqio *nio = (nsqio *)conn->arg;
     conn->reconnect_timer = (ev_timer *)malloc(sizeof(ev_timer));
-    ev_timer_init(conn->reconnect_timer, reconnect_callback, rdr->cfg->lookupd_interval, rdr->cfg->lookupd_interval);
+    ev_timer_init(conn->reconnect_timer, reconnect_callback, nio->cfg->lookupd_interval, nio->cfg->lookupd_interval);
     conn->reconnect_timer->data = conn;
 }
 

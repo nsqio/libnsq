@@ -1,6 +1,6 @@
 #include "nsq.h"
 
-static void message_handler(nsqRdr *rdr, nsqdConn *conn, nsqMsg *msg, void *ctx)
+static void message_handler(nsqio *rdr, nsqdConn *conn, nsqMsg *msg, void *ctx)
 {
     _DEBUG("%s: %lld, %d, %s, %lu, %.*s\n", __FUNCTION__, msg->timestamp, msg->attempts, msg->id,
         msg->body_length, (int)msg->body_length, msg->body);
@@ -30,12 +30,12 @@ int main(int argc, char **argv)
         printf("not enough args from command line\n");
         return 1;
     }
-    nsqRdr *rdr;
+    nsqio *rdr;
     struct ev_loop *loop;
     void *ctx = NULL; //(void *)(new TestNsqMsgContext());
 
     loop = ev_default_loop(0);
-    rdr = new_nsq_reader(loop, argv[2], argv[3], ctx, NULL, NULL, NULL, message_handler);
+    rdr = new_nsqio(loop, argv[2], argv[3], ctx, NULL, NULL, message_handler, NSQ_LOOKUPD_MODE_READ);
 
 #ifdef NSQD_STANDALONE
     nsq_reader_connect_to_nsqd(rdr, argv[1], 4150);
@@ -43,7 +43,7 @@ int main(int argc, char **argv)
 #else
     nsq_reader_add_nsqlookupd_endpoint(rdr, argv[1], 4161);
 #endif
-    nsq_run(loop);
+    nsq_reader_run(loop);
 
     return 0;
 }

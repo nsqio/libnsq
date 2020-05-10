@@ -3,6 +3,7 @@
 
 #include <ev.h>
 #include "libevbuffsock/evbuffsock.h"
+#include "http.h"
 
 #ifdef DEBUG
 #define _DEBUG(...) fprintf(stdout, __VA_ARGS__)
@@ -11,7 +12,8 @@
 #endif
 
 typedef enum {NSQ_FRAME_TYPE_RESPONSE, NSQ_FRAME_TYPE_ERROR, NSQ_FRAME_TYPE_MESSAGE} frame_type;
-typedef enum {NSQ_PARAM_TYPE_INT, NSQ_PARAM_TYPE_CHAR} nsq_cmd_param_type;
+typedef enum {NSQ_PARAM_TYPE_INT, NSQ_PARAM_TYPE_CHAR} nsqCmdParamType;
+typedef enum {NSQ_LOOKUPD_MODE_READ, NSQ_LOOKUPD_MODE_WRITE} nsqLookupdMode;
 typedef struct Buffer nsqBuf;
 typedef struct BufferedSocket nsqBufdSock;
 
@@ -30,10 +32,10 @@ typedef struct NSQLookupdEndpoint {
     char *address;
     int port;
     struct NSQLookupdEndpoint *next;
-} nsqLE;
+} nsqLookupdEndpoint;
 
-nsqLE *new_nsqlookupd_endpoint(const char *address, int port);
-void free_nsqlookupd_endpoint(nsqLE *nsqlookupd_endpoint);
+nsqLookupdEndpoint *new_nsqlookupd_endpoint(const char *address, int port);
+void free_nsqlookupd_endpoint(nsqLookupdEndpoint *nsqlookupd_endpoint);
 
 typedef struct NSQDConnection {
     char *address;
@@ -65,7 +67,7 @@ void nsqd_connection_init_timer(nsqdConn *conn,
         void (*reconnect_callback)(EV_P_ ev_timer *w, int revents));
 void nsqd_connection_stop_timer(nsqdConn *conn);
 
-typedef struct NSQReaderCfg {
+typedef struct NSQCfg {
     ev_tstamp lookupd_interval;
     size_t command_buf_len;
     size_t command_buf_capacity;
@@ -73,40 +75,42 @@ typedef struct NSQReaderCfg {
     size_t read_buf_capacity;
     size_t write_buf_len;
     size_t write_buf_capacity;
-} nsqRdrCfg;
+} nsqCfg;
 
-typedef struct NSQReader {
+typedef struct NSQIO {
     char *topic;
     char *channel;
     void *ctx; //context for call back
     int max_in_flight;
     nsqdConn *conns;
     struct NSQDConnInfo *infos;
-    nsqLE *lookupd;
+    nsqLookupdEndpoint *lookupd;
     struct ev_timer *lookupd_poll_timer;
     struct ev_loop *loop;
-    nsqRdrCfg *cfg;
-    void *httpc;
-    void (*connect_callback)(struct NSQReader *rdr, nsqdConn *conn);
-    void (*close_callback)(struct NSQReader *rdr, nsqdConn *conn);
-    void (*msg_callback)(struct NSQReader *rdr, nsqdConn *conn, nsqMsg *msg, void *ctx);
-} nsqRdr;
+    nsqCfg *cfg;
+    httpClient *httpc;
+    void (*connect_callback)(struct NSQIO *, nsqdConn *conn);
+    void (*close_callback)(struct NSQIO *, nsqdConn *conn);
+    void (*msg_callback)(struct NSQIO *, nsqdConn *conn, nsqMsg *msg, void *ctx);
+    nsqLookupdMode mode;
+} nsqio;
 
-nsqRdr *new_nsq_reader(struct ev_loop *loop, const char *topic, const char *channel, void *ctx,
-    nsqRdrCfg *cfg,
-    void (*connect_callback)(nsqRdr *rdr, nsqdConn *conn),
-    void (*close_callback)(nsqRdr *rdr, nsqdConn *conn),
-    void (*msg_callback)(nsqRdr *rdr, nsqdConn *conn, nsqMsg *msg, void *ctx));
-void free_nsq_reader(nsqRdr *rdr);
-int nsq_reader_connect_to_nsqd(nsqRdr *rdr, const char *address, int port);
-int nsq_reader_connect_to_nsqlookupd(nsqRdr *rdr);
-int nsq_reader_add_nsqlookupd_endpoint(nsqRdr *rdr, const char *address, int port);
-void nsq_reader_set_loop(nsqRdr *rdr, struct ev_loop *loop);
-void nsq_run(struct ev_loop *loop);
+nsqio *new_nsqio(struct ev_loop *loop, const char *topic, const char *channel, void *ctx,
+    void (*connect_callback)(nsqio *, nsqdConn *conn),
+    void (*close_callback)(nsqio *, nsqdConn *conn),
+    void (*msg_callback)(nsqio *, nsqdConn *conn, nsqMsg *msg, void *ctx),
+    nsqLookupdMode mode);
+void free_nsqio(nsqio *);
+
+int nsq_reader_connect_to_nsqd(nsqio *rdr, const char *address, int port);
+int nsq_reader_connect_to_nsqlookupd(nsqio *rdr);
+int nsq_reader_add_nsqlookupd_endpoint(nsqio *rdr, const char *address, int port);
+void nsq_reader_set_loop(nsqio *rdr, struct ev_loop *loop);
+void nsq_reader_run(struct ev_loop *loop);
 
 typedef struct NSQCmdParams {
     void *v;
-    int t;
+    nsqCmdParamType t;
 } nsqCmdParams;
 
 void *nsq_buf_malloc(size_t buf_size, size_t n, size_t l);

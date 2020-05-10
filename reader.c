@@ -4,17 +4,9 @@
 #include "nsq.h"
 #include "utlist.h"
 
-#define DEFAULT_LOOKUPD_INTERVAL     5.
-#define DEFAULT_COMMAND_BUF_LEN      4096
-#define DEFAULT_COMMAND_BUF_CAPACITY 4096
-#define DEFAULT_READ_BUF_LEN         16 * 1024
-#define DEFAULT_READ_BUF_CAPACITY    16 * 1024
-#define DEFAULT_WRITE_BUF_LEN        16 * 1024
-#define DEFAULT_WRITE_BUF_CAPACITY   16 * 1024
-
 static void nsq_reader_connect_cb(nsqdConn *conn, void *arg)
 {
-    nsqRdr *rdr = (nsqRdr *)arg;
+    nsqio *rdr = (nsqio *)arg;
 
     _DEBUG("%s: %p\n", __FUNCTION__, rdr);
 
@@ -35,7 +27,7 @@ static void nsq_reader_connect_cb(nsqdConn *conn, void *arg)
 
 static void nsq_reader_msg_cb(nsqdConn *conn, nsqMsg *msg, void *arg)
 {
-    nsqRdr *rdr = (nsqRdr *)arg;
+    nsqio *rdr = (nsqio *)arg;
 
     _DEBUG("%s: %p %p\n", __FUNCTION__, msg, rdr);
 
@@ -47,7 +39,7 @@ static void nsq_reader_msg_cb(nsqdConn *conn, nsqMsg *msg, void *arg)
 
 static void nsq_reader_close_cb(nsqdConn *conn, void *arg)
 {
-    nsqRdr *rdr = (nsqRdr *)arg;
+    nsqio *rdr = (nsqio *)arg;
 
     _DEBUG("%s: %p\n", __FUNCTION__, rdr);
 
@@ -70,7 +62,7 @@ void nsq_lookupd_request_cb(httpRequest *req, httpResponse *resp, void *arg);
 static void nsq_reader_reconnect_cb(EV_P_ struct ev_timer *w, int revents)
 {
     nsqdConn *conn = (nsqdConn *)w->data;
-    nsqRdr *rdr = (nsqRdr *)conn->arg;
+    nsqio *rdr = (nsqio *)conn->arg;
 
     if (rdr->lookupd == NULL) {
         _DEBUG("%s: There is no lookupd, try to reconnect to nsqd directly\n", __FUNCTION__);
@@ -82,8 +74,8 @@ static void nsq_reader_reconnect_cb(EV_P_ struct ev_timer *w, int revents)
 
 static void nsq_reader_lookupd_poll_cb(EV_P_ struct ev_timer *w, int revents)
 {
-    nsqRdr *rdr = (nsqRdr *)w->data;
-    nsqLE *nsqlookupd_endpoint;
+    nsqio *rdr = (nsqio *)w->data;
+    nsqLookupdEndpoint *nsqlookupd_endpoint;
     httpRequest *req;
     int i, idx, count = 0;
     char buf[256];
@@ -113,54 +105,10 @@ end:
     ev_timer_again(rdr->loop, rdr->lookupd_poll_timer);
 }
 
-nsqRdr *new_nsq_reader(struct ev_loop *loop, const char *topic, const char *channel, void *ctx,
-    nsqRdrCfg *cfg,
-    void (*connect_callback)(nsqRdr *rdr, nsqdConn *conn),
-    void (*close_callback)(nsqRdr *rdr, nsqdConn *conn),
-    void (*msg_callback)(nsqRdr *rdr, nsqdConn *conn, nsqMsg *msg, void *ctx))
-{
-    nsqRdr *rdr;
-
-    rdr = (nsqRdr *)malloc(sizeof(nsqRdr));
-    rdr->cfg = (nsqRdrCfg *)malloc(sizeof(nsqRdrCfg));
-    rdr->lookupd_poll_timer = malloc(sizeof(struct ev_timer));
-    if (cfg == NULL) {
-        rdr->cfg->lookupd_interval     = DEFAULT_LOOKUPD_INTERVAL;
-        rdr->cfg->command_buf_len      = DEFAULT_COMMAND_BUF_LEN;
-        rdr->cfg->command_buf_capacity = DEFAULT_COMMAND_BUF_CAPACITY;
-        rdr->cfg->read_buf_len         = DEFAULT_READ_BUF_LEN;
-        rdr->cfg->read_buf_capacity    = DEFAULT_READ_BUF_CAPACITY;
-        rdr->cfg->write_buf_len        = DEFAULT_WRITE_BUF_LEN;
-        rdr->cfg->write_buf_capacity   = DEFAULT_WRITE_BUF_CAPACITY;
-    } else {
-        rdr->cfg->lookupd_interval     = cfg->lookupd_interval     <= 0 ? DEFAULT_LOOKUPD_INTERVAL     : cfg->lookupd_interval;
-        rdr->cfg->command_buf_len      = cfg->command_buf_len      <= 0 ? DEFAULT_COMMAND_BUF_LEN      : cfg->command_buf_len;
-        rdr->cfg->command_buf_capacity = cfg->command_buf_capacity <= 0 ? DEFAULT_COMMAND_BUF_CAPACITY : cfg->command_buf_capacity;
-        rdr->cfg->read_buf_len         = cfg->read_buf_len         <= 0 ? DEFAULT_READ_BUF_LEN         : cfg->read_buf_len;
-        rdr->cfg->read_buf_capacity    = cfg->read_buf_capacity    <= 0 ? DEFAULT_READ_BUF_CAPACITY    : cfg->read_buf_capacity;
-        rdr->cfg->write_buf_len        = cfg->write_buf_len        <= 0 ? DEFAULT_WRITE_BUF_LEN        : cfg->write_buf_len;
-        rdr->cfg->write_buf_capacity   = cfg->write_buf_capacity   <= 0 ? DEFAULT_WRITE_BUF_CAPACITY   : cfg->write_buf_capacity;
-    }
-    rdr->topic = strdup(topic);
-    rdr->channel = strdup(channel);
-    rdr->max_in_flight = 1;
-    rdr->connect_callback = connect_callback;
-    rdr->close_callback = close_callback;
-    rdr->msg_callback = msg_callback;
-    rdr->ctx = ctx;
-    rdr->conns = NULL;
-    rdr->lookupd = NULL;
-    rdr->loop = loop;
-
-    rdr->httpc = new_http_client(rdr->loop);
-
-    return rdr;
-}
-
-void free_nsq_reader(nsqRdr *rdr)
+void free_nsq_reader(nsqio *rdr)
 {
     nsqdConn *conn;
-    nsqLE *nsqlookupd_endpoint;
+    nsqLookupdEndpoint *nsqlookupd_endpoint;
 
     if (rdr) {
         // TODO: this should probably trigger disconnections and then keep
@@ -179,9 +127,9 @@ void free_nsq_reader(nsqRdr *rdr)
     }
 }
 
-int nsq_reader_add_nsqlookupd_endpoint(nsqRdr *rdr, const char *address, int port)
+int nsq_reader_add_nsqlookupd_endpoint(nsqio *rdr, const char *address, int port)
 {
-    nsqLE *nsqlookupd_endpoint;
+    nsqLookupdEndpoint *nsqlookupd_endpoint;
     nsqdConn *conn;
 
     if (rdr->lookupd == NULL) {
@@ -201,7 +149,7 @@ int nsq_reader_add_nsqlookupd_endpoint(nsqRdr *rdr, const char *address, int por
     return 1;
 }
 
-int nsq_reader_connect_to_nsqd(nsqRdr *rdr, const char *address, int port)
+int nsq_reader_connect_to_nsqd(nsqio *rdr, const char *address, int port)
 {
     nsqdConn *conn;
     int rc;
@@ -220,7 +168,7 @@ int nsq_reader_connect_to_nsqd(nsqRdr *rdr, const char *address, int port)
     return rc;
 }
 
-void nsq_run(struct ev_loop *loop)
+void nsq_reader_run(struct ev_loop *loop)
 {
     srand((unsigned)time(NULL));
     ev_loop(loop, 0);
