@@ -14,10 +14,6 @@ typedef enum {NSQ_FRAME_TYPE_RESPONSE, NSQ_FRAME_TYPE_ERROR, NSQ_FRAME_TYPE_MESS
 typedef enum {NSQ_PARAM_TYPE_INT, NSQ_PARAM_TYPE_CHAR} nsq_cmd_param_type;
 typedef struct Buffer nsqBuf;
 typedef struct BufferedSocket nsqBufdSock;
-typedef struct NSQCmdParams {
-    void *v;
-    int t;
-} nsqCmdParams;
 
 typedef struct NSQMessage {
     int64_t timestamp;
@@ -26,11 +22,19 @@ typedef struct NSQMessage {
     size_t body_length;
     char *body;
 } nsqMsg;
+
+nsqMsg *nsq_decode_message(const char *data, size_t data_length);
+void free_nsq_message(nsqMsg *msg);
+
 typedef struct NSQLookupdEndpoint {
     char *address;
     int port;
     struct NSQLookupdEndpoint *next;
 } nsqLE;
+
+nsqLE *new_nsqlookupd_endpoint(const char *address, int port);
+void free_nsqlookupd_endpoint(nsqLE *nsqlookupd_endpoint);
+
 typedef struct NSQDConnection {
     char *address;
     int port;
@@ -47,6 +51,20 @@ typedef struct NSQDConnection {
     void *arg;
     struct NSQDConnection *next;
 } nsqdConn;
+
+nsqdConn *new_nsqd_connection(struct ev_loop *loop, const char *address, int port,
+    void (*connect_callback)(nsqdConn *conn, void *arg),
+    void (*close_callback)(nsqdConn *conn, void *arg),
+    void (*msg_callback)(nsqdConn *conn, nsqMsg *msg, void *arg),
+    void *arg);
+void free_nsqd_connection(nsqdConn *conn);
+int nsqd_connection_connect(nsqdConn *conn);
+void nsqd_connection_disconnect(nsqdConn *conn);
+
+void nsqd_connection_init_timer(nsqdConn *conn,
+        void (*reconnect_callback)(EV_P_ ev_timer *w, int revents));
+void nsqd_connection_stop_timer(nsqdConn *conn);
+
 typedef struct NSQReaderCfg {
     ev_tstamp lookupd_interval;
     size_t command_buf_len;
@@ -86,18 +104,10 @@ int nsq_reader_add_nsqlookupd_endpoint(nsqRdr *rdr, const char *address, int por
 void nsq_reader_set_loop(nsqRdr *rdr, struct ev_loop *loop);
 void nsq_run(struct ev_loop *loop);
 
-nsqdConn *new_nsqd_connection(struct ev_loop *loop, const char *address, int port,
-    void (*connect_callback)(nsqdConn *conn, void *arg),
-    void (*close_callback)(nsqdConn *conn, void *arg),
-    void (*msg_callback)(nsqdConn *conn, nsqMsg *msg, void *arg),
-    void *arg);
-void free_nsqd_connection(nsqdConn *conn);
-int nsqd_connection_connect(nsqdConn *conn);
-void nsqd_connection_disconnect(nsqdConn *conn);
-
-void nsqd_connection_init_timer(nsqdConn *conn,
-        void (*reconnect_callback)(EV_P_ ev_timer *w, int revents));
-void nsqd_connection_stop_timer(nsqdConn *conn);
+typedef struct NSQCmdParams {
+    void *v;
+    int t;
+} nsqCmdParams;
 
 void *nsq_buf_malloc(size_t buf_size, size_t n, size_t l);
 void nsq_buffer_add(nsqBuf *buf, const char *name, const nsqCmdParams params[], size_t psize, const char *body, const size_t body_length);
@@ -114,11 +124,5 @@ void nsq_touch(nsqBuf *buf, const char *id);
 void nsq_cleanly_close_connection(nsqBuf *buf);
 void nsq_auth(nsqBuf *buf, const char *secret);
 void nsq_identify(nsqBuf *buf, const char *json_body);
-
-nsqMsg *nsq_decode_message(const char *data, size_t data_length);
-void free_nsq_message(nsqMsg *msg);
-
-nsqLE *new_nsqlookupd_endpoint(const char *address, int port);
-void free_nsqlookupd_endpoint(nsqLE *nsqlookupd_endpoint);
 
 #endif
