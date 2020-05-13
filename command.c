@@ -5,33 +5,31 @@
 
 #include "nsq.h"
 
-static const int MAX_BUF_SIZE = 128;
-static const int MIN_BUF_SIZE = 64;
-static const int BUF_DELTER   = 2;
+static const int defaultBufSize = 32;
+static const int restBufSize    = 16;
+static const int bufDelter      = 1;
 
-void *nsq_buf_malloc(size_t buf_size, size_t n, size_t l)
+void *nsq_buf_malloc(size_t *buf_size, size_t n, size_t l)
 {
-    if (buf_size - n >= MIN_BUF_SIZE || buf_size - l >= MIN_BUF_SIZE) {
+    int realLeftSize = (int)(*buf_size - n - l);
+
+    if (realLeftSize >= restBufSize) {
         return NULL;
     }
+
+    *buf_size += (restBufSize - realLeftSize) << bufDelter;
     
     void *buf = NULL;
-    while (1) {
-        if (buf_size - n < MIN_BUF_SIZE || buf_size - l < MIN_BUF_SIZE) {
-            buf_size *= BUF_DELTER;
-            continue;
-        }
-        buf = malloc(buf_size * sizeof(char));
-        assert(NULL != buf);
-        break;
-    }
+    
+    buf = malloc(*buf_size);
+    assert(NULL != buf);
     
     return buf;
 }
 
 void nsq_buffer_add(nsqBuf *buf, const char *name, const nsqCmdParams params[], size_t psize, const char *body, const size_t body_length)
 {
-    size_t buf_size = MAX_BUF_SIZE;
+    size_t buf_size = defaultBufSize;
     char *b = malloc(buf_size * sizeof(char));
     char *nb = NULL;
     assert(NULL != b);
@@ -52,13 +50,13 @@ void nsq_buffer_add(nsqBuf *buf, const char *name, const nsqCmdParams params[], 
                     l = sprintf(b+n, "%d", *((int *)params[i].v));
                     break;
                 case NSQ_PARAM_TYPE_CHAR:
-                    nb = nsq_buf_malloc(buf_size, n, strlen(params[i].v));
+                    l = strlen((char *)params[i].v);
+                    nb = nsq_buf_malloc(&buf_size, n, l);
                     if (NULL != nb) {
                         memcpy(nb, b, n);
                         free(b);
                         b = nb;
                     }
-                    l = strlen((char *)params[i].v);
                     memcpy(b+n, (char *)params[i].v, l);
                     break;
             }
@@ -73,7 +71,7 @@ void nsq_buffer_add(nsqBuf *buf, const char *name, const nsqCmdParams params[], 
         memcpy(b+n, &vv, 4);
         n += 4;
 
-        nb = nsq_buf_malloc(buf_size, n, body_length);
+        nb = nsq_buf_malloc(&buf_size, n, body_length);
         if (NULL != nb) {
             memcpy(nb, b, n);
             free(b);
@@ -82,7 +80,7 @@ void nsq_buffer_add(nsqBuf *buf, const char *name, const nsqCmdParams params[], 
         memcpy(b+n, body, body_length);
         n += body_length;
     }
-    
+
     buffer_add(buf, b, n);
 }
 
