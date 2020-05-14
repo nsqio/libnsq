@@ -1,9 +1,10 @@
+#include "nsq.h"
+
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "nsq.h"
 
 void nsq_buffer_add(nsqBuf *buf, const char *name, const nsqCmdParams params[], size_t psize, const char *body, const size_t body_length)
 {

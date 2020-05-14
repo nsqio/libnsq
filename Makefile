@@ -5,7 +5,7 @@ INCDIR=${PREFIX}/include
 
 CFLAGS += --std=c99 -D_XOPEN_SOURCE=600 -g -O2 -DDEBUG -fPIC
 CFLAGS += -Wall -Wextra -Wwrite-strings -Wshadow -Wno-unused-parameter
-LIBS=-lev -levbuffsock -lcurl
+LIBS=-lev -lcurl
 AR=ar
 AR_FLAGS=rc
 RANLIB=ranlib
@@ -17,30 +17,40 @@ else
 LIBS+=-ljson-c
 endif
 
-all: libnsq test
+LIBNSQ_SOURCES = \
+command.c \
+message.c \
+reader.c \
+http.c \
+json.c \
+nsqlookupd.c \
+nsqd_connection.c \
+buffer.c \
+buffered_socket.c
 
+all: libnsq
 libnsq: libnsq.a
 
 %.o: %.c
-	$(CC) -o $@ -c $< $(CFLAGS)
+	$(CC) -o $@ -c $< -I. $(CFLAGS)
 
-libnsq.a: command.o reader.o nsqd_connection.o http.o message.o nsqlookupd.o json.o
+libnsq.a: $(patsubst %.c, %.o, ${LIBNSQ_SOURCES})
 	$(AR) $(AR_FLAGS) $@ $^
 	$(RANLIB) $@
 
-test: test-nsqd test-lookupd
+test: test-nsqd test-lookupd test-evbuffsock
 
-test-nsqd.o: test.c
-	$(CC) -o $@ -c $< $(CFLAGS) -DNSQD_STANDALONE
+test-nsqd: test.c libnsq.a
+	$(CC) -o $@ $^ -I. $(CFLAGS) $(LIBS) -DNSQD_STANDALONE
 
-test-nsqd: test-nsqd.o libnsq.a
-	$(CC) -o $@ $^ $(LIBS)
+test-lookupd: test.c libnsq.a
+	$(CC) -o $@ $^ -I. $(CFLAGS) $(LIBS)
 
-test-lookupd: test-nsqd.o libnsq.a
-	$(CC) -o $@ $^ $(LIBS)
+test-evbuffsock: test_evbuffsock.c buffer.c
+	$(CC) -o $@ $^ $(CFLAGS) -lev
 
 clean:
-	rm -rf libnsq.a test-nsqd test-lookupd test.dSYM *.o
+	rm -rvf libnsq.a test-nsqd test-lookupd test-evbuffsock *.dSYM *.o
 
 .PHONY: install clean all test
 
@@ -49,3 +59,4 @@ install:
 	install -m 755 -d ${DESTDIR}${LIBDIR}
 	install -m 755 libnsq.a ${DESTDIR}${LIBDIR}/libnsq.a
 	install -m 755 nsq.h ${DESTDIR}${INCDIR}/nsq.h
+	install -m 755 evbuffsock.h ${DESTDIR}${INCDIR}/evbuffsock.h

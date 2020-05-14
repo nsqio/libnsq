@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <assert.h>
 #include "evbuffsock.h"
 
@@ -16,4 +17,6 @@ int main(int argc, char **argv)
     
     assert(buf->length == 32);
     assert(strncmp("567890ghjk1234567890!@#$%^", buf->data, buf->offset) == 0);
+    printf("OK\n");
+    return 0;
 }

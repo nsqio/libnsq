@@ -1,7 +1,9 @@
+#include "nsq.h"
+
 #include "http.h"
 #include "json.h"
-#include "nsq.h"
 #include "utlist.h"
+
 
 void nsq_lookupd_request_cb(httpRequest *req, httpResponse *resp, void *arg)
 {
