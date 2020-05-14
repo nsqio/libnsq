@@ -99,7 +99,6 @@ void nsqd_connection_init_timer(nsqdConn *conn,
         void (*reconnect_callback)(EV_P_ ev_timer *w, int revents));
 void nsqd_connection_stop_timer(nsqdConn *conn);
 
-void *nsq_buf_malloc(size_t buf_size, size_t n, size_t l);
 void nsq_buffer_add(nsqBuf *buf, const char *name, const nsqCmdParams params[], size_t psize, const char *body, const size_t body_length);
 
 void nsq_subscribe(nsqBuf *buf, const char *topic, const char *channel);
