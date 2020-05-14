@@ -5,85 +5,35 @@
 
 #include "nsq.h"
 
-static const int MAX_BUF_SIZE = 128;
-static const int MIN_BUF_SIZE = 64;
-static const int BUF_DELTER   = 2;
-
-void *nsq_buf_malloc(size_t buf_size, size_t n, size_t l)
-{
-    if (buf_size - n >= MIN_BUF_SIZE || buf_size - l >= MIN_BUF_SIZE) {
-        return NULL;
-    }
-    
-    void *buf = NULL;
-    while (1) {
-        if (buf_size - n < MIN_BUF_SIZE || buf_size - l < MIN_BUF_SIZE) {
-            buf_size *= BUF_DELTER;
-            continue;
-        }
-        buf = malloc(buf_size * sizeof(char));
-        assert(NULL != buf);
-        break;
-    }
-    
-    return buf;
-}
-
 void nsq_buffer_add(nsqBuf *buf, const char *name, const nsqCmdParams params[], size_t psize, const char *body, const size_t body_length)
 {
-    size_t buf_size = MAX_BUF_SIZE;
-    char *b = malloc(buf_size * sizeof(char));
-    char *nb = NULL;
-    assert(NULL != b);
-    size_t n = 0;
-    size_t l = 0;
+    char b[64];
+    size_t l;
 
-    l = strlen(name);
-    memcpy(b, name, l);
-    n += l;
+    buffer_add(buf, (void*)name, strlen(name));
 
     if (NULL != params) {
         for (size_t i = 0; i < psize; i++) {
-            memcpy(b+n, " ", 1);
-            n += 1;
+            buffer_add(buf, (void*)" ", 1);
 
             switch (params[i].t) {
                 case NSQ_PARAM_TYPE_INT:
-                    l = sprintf(b+n, "%d", *((int *)params[i].v));
+                    l = sprintf(b, "%d", *((int *)params[i].v));
+                    buffer_add(buf, b, l);
                     break;
                 case NSQ_PARAM_TYPE_CHAR:
-                    nb = nsq_buf_malloc(buf_size, n, strlen(params[i].v));
-                    if (NULL != nb) {
-                        memcpy(nb, b, n);
-                        free(b);
-                        b = nb;
-                    }
-                    l = strlen((char *)params[i].v);
-                    memcpy(b+n, (char *)params[i].v, l);
+                    buffer_add(buf, params[i].v, strlen((char *)params[i].v));
                     break;
             }
-            n += l;
         }
     }
-    memcpy(b+n, "\n", 1);
-    n += 1;
+    buffer_add(buf, (void*)"\n", 1);
 
     if (NULL != body) {
         uint32_t vv = htonl((uint32_t)body_length);
-        memcpy(b+n, &vv, 4);
-        n += 4;
-
-        nb = nsq_buf_malloc(buf_size, n, body_length);
-        if (NULL != nb) {
-            memcpy(nb, b, n);
-            free(b);
-            b = nb;
-        }
-        memcpy(b+n, body, body_length);
-        n += body_length;
+        buffer_add(buf, &vv, 4);
+        buffer_add(buf, (void*)body, body_length);
     }
-    
-    buffer_add(buf, b, n);
 }
 
 void nsq_subscribe(nsqBuf *buf, const char *topic, const char *channel)
