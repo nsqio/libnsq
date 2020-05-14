@@ -33,7 +33,7 @@ struct Buffer {
 struct Buffer *new_buffer(size_t length, size_t capacity);
 void free_buffer(struct Buffer *buf);
 void buffer_reset(struct Buffer *buf);
-int buffer_add(struct Buffer *buf, void *source, size_t length);
+int buffer_add(struct Buffer *buf, const void *source, size_t length);
 void buffer_drain(struct Buffer *buf, size_t length);
 int buffer_read_fd(struct Buffer *buf, int fd);
 int buffer_write_fd(struct Buffer *buf, int fd);

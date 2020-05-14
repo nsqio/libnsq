@@ -71,7 +71,7 @@ int buffer_expand(struct Buffer *buf, size_t need)
     return 1;
 }
 
-int buffer_add(struct Buffer *buf, void *source, size_t length)
+int buffer_add(struct Buffer *buf, const void *source, size_t length)
 {
     size_t used = buf->data - buf->orig + buf->offset;
     int32_t need = used + length - buf->length;
