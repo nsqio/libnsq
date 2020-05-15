@@ -6,7 +6,9 @@
 #include <stdlib.h>
 
 
-void nsq_buffer_add(nsqBuf *buf, const char *name, const nsqCmdParams params[], size_t psize, const char *body, const size_t body_length)
+static void nsq_buffer_add(nsqBuf *buf, const char *name,
+                           const nsqCmdParams params[], size_t psize,
+                           const char *body, const size_t body_length)
 {
     char b[64];
     size_t l;
