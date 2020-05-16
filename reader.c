@@ -86,7 +86,7 @@ static void nsq_reader_reconnect_cb(EV_P_ struct ev_timer *w, int revents)
 static void nsq_reader_lookupd_poll_cb(EV_P_ struct ev_timer *w, int revents)
 {
     nsqRdr *rdr = (nsqRdr *)w->data;
-    nsqLE *nsqlookupd_endpoint;
+    nsqLookupdEndpoint *nsqlookupd_endpoint;
     httpRequest *req;
     int i, idx, count = 0;
     char buf[256];
@@ -162,7 +162,7 @@ nsqRdr *new_nsq_reader(struct ev_loop *loop, const char *topic, const char *chan
 void free_nsq_reader(nsqRdr *rdr)
 {
     nsqdConn *conn;
-    nsqLE *nsqlookupd_endpoint;
+    nsqLookupdEndpoint *nsqlookupd_endpoint;
 
     if (rdr) {
         // TODO: this should probably trigger disconnections and then keep
@@ -182,7 +182,7 @@ void free_nsq_reader(nsqRdr *rdr)
 
 int nsq_reader_add_nsqlookupd_endpoint(nsqRdr *rdr, const char *address, int port)
 {
-    nsqLE *nsqlookupd_endpoint;
+    nsqLookupdEndpoint *nsqlookupd_endpoint;
     nsqdConn *conn;
 
     if (rdr->lookupd == NULL) {

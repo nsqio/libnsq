@@ -78,11 +78,11 @@ void nsq_lookupd_request_cb(httpRequest *req, httpResponse *resp, void *arg)
     free_http_request(req);
 }
 
-nsqLE *new_nsqlookupd_endpoint(const char *address, int port)
+nsqLookupdEndpoint *new_nsqlookupd_endpoint(const char *address, int port)
 {
-    nsqLE *nsqlookupd_endpoint;
+    nsqLookupdEndpoint *nsqlookupd_endpoint;
 
-    nsqlookupd_endpoint = (nsqLE *)malloc(sizeof(nsqLE));
+    nsqlookupd_endpoint = (nsqLookupdEndpoint *)malloc(sizeof(nsqLookupdEndpoint));
     nsqlookupd_endpoint->address = strdup(address);
     nsqlookupd_endpoint->port = port;
     nsqlookupd_endpoint->next = NULL;
@@ -90,7 +90,7 @@ nsqLE *new_nsqlookupd_endpoint(const char *address, int port)
     return nsqlookupd_endpoint;
 }
 
-void free_nsqlookupd_endpoint(nsqLE *nsqlookupd_endpoint)
+void free_nsqlookupd_endpoint(nsqLookupdEndpoint *nsqlookupd_endpoint)
 {
     if (nsqlookupd_endpoint) {
         free(nsqlookupd_endpoint->address);

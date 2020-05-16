@@ -36,7 +36,7 @@ typedef struct NSQLookupdEndpoint {
     char *address;
     int port;
     struct NSQLookupdEndpoint *next;
-} nsqLE;
+} nsqLookupdEndpoint;
 
 typedef struct NSQDConnection {
     char *address;
@@ -72,7 +72,7 @@ typedef struct NSQReader {
     int max_in_flight;
     nsqdConn *conns;
     struct NSQDConnInfo *infos;
-    nsqLE *lookupd;
+    nsqLookupdEndpoint *lookupd;
     struct ev_timer lookupd_poll_timer;
     struct ev_loop *loop;
     nsqRdrCfg *cfg;
@@ -123,7 +123,7 @@ void nsq_identify(nsqBuf *buf, const char *json_body);
 nsqMsg *nsq_decode_message(const char *data, size_t data_length);
 void free_nsq_message(nsqMsg *msg);
 
-nsqLE *new_nsqlookupd_endpoint(const char *address, int port);
-void free_nsqlookupd_endpoint(nsqLE *nsqlookupd_endpoint);
+nsqLookupdEndpoint *new_nsqlookupd_endpoint(const char *address, int port);
+void free_nsqlookupd_endpoint(nsqLookupdEndpoint *nsqlookupd_endpoint);
 
 #endif
