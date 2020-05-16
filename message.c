@@ -1,3 +1,6 @@
+#include <stdlib.h>
+#include <arpa/inet.h>
+
 #include "nsq.h"
 
 uint64_t ntoh64(const uint8_t *data) {

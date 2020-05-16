@@ -1,6 +1,8 @@
 #ifndef __nsq_h
 #define __nsq_h
 
+#include <stdint.h>
+
 #include <ev.h>
 #include <evbuffsock.h>
 
@@ -10,10 +12,13 @@
 #define _DEBUG(...) do {;} while (0)
 #endif
 
+struct Buffer; // from evbuffsock.h
+
 typedef enum {NSQ_FRAME_TYPE_RESPONSE, NSQ_FRAME_TYPE_ERROR, NSQ_FRAME_TYPE_MESSAGE} frame_type;
 typedef enum {NSQ_PARAM_TYPE_INT, NSQ_PARAM_TYPE_CHAR} nsq_cmd_param_type;
 typedef struct Buffer nsqBuf;
 typedef struct BufferedSocket nsqBufdSock;
+
 typedef struct NSQCmdParams {
     void *v;
     int t;
@@ -26,11 +31,13 @@ typedef struct NSQMessage {
     size_t body_length;
     char *body;
 } nsqMsg;
+
 typedef struct NSQLookupdEndpoint {
     char *address;
     int port;
     struct NSQLookupdEndpoint *next;
 } nsqLE;
+
 typedef struct NSQDConnection {
     char *address;
     int port;
@@ -47,6 +54,7 @@ typedef struct NSQDConnection {
     void *arg;
     struct NSQDConnection *next;
 } nsqdConn;
+
 typedef struct NSQReaderCfg {
     ev_tstamp lookupd_interval;
     size_t command_buf_len;
@@ -98,8 +106,6 @@ void nsqd_connection_disconnect(nsqdConn *conn);
 void nsqd_connection_init_timer(nsqdConn *conn,
         void (*reconnect_callback)(EV_P_ ev_timer *w, int revents));
 void nsqd_connection_stop_timer(nsqdConn *conn);
-
-void nsq_buffer_add(nsqBuf *buf, const char *name, const nsqCmdParams params[], size_t psize, const char *body, const size_t body_length);
 
 void nsq_subscribe(nsqBuf *buf, const char *topic, const char *channel);
 void nsq_ready(nsqBuf *buf, int count);

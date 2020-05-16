@@ -1,8 +1,9 @@
+#include "nsq.h"
+
 #include <time.h>
 #include <string.h>
 
 #include "http.h"
-#include "nsq.h"
 #include "utlist.h"
 
 #define DEFAULT_LOOKUPD_INTERVAL     5.
@@ -12,6 +13,7 @@
 #define DEFAULT_READ_BUF_CAPACITY    16 * 1024
 #define DEFAULT_WRITE_BUF_LEN        16 * 1024
 #define DEFAULT_WRITE_BUF_CAPACITY   16 * 1024
+
 
 static void nsq_reader_connect_cb(nsqdConn *conn, void *arg)
 {

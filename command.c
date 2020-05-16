@@ -1,20 +1,23 @@
+#include "nsq.h"
+
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "nsq.h"
 
-void nsq_buffer_add(nsqBuf *buf, const char *name, const nsqCmdParams params[], size_t psize, const char *body, const size_t body_length)
+static void nsq_buffer_add(nsqBuf *buf, const char *name,
+                           const nsqCmdParams params[], size_t psize,
+                           const char *body, const size_t body_length)
 {
     char b[64];
     size_t l;
 
-    buffer_add(buf, (void*)name, strlen(name));
+    buffer_add(buf, name, strlen(name));
 
     if (NULL != params) {
         for (size_t i = 0; i < psize; i++) {
-            buffer_add(buf, (void*)" ", 1);
+            buffer_add(buf, " ", 1);
 
             switch (params[i].t) {
                 case NSQ_PARAM_TYPE_INT:
@@ -27,12 +30,12 @@ void nsq_buffer_add(nsqBuf *buf, const char *name, const nsqCmdParams params[], 
             }
         }
     }
-    buffer_add(buf, (void*)"\n", 1);
+    buffer_add(buf, "\n", 1);
 
     if (NULL != body) {
         uint32_t vv = htonl((uint32_t)body_length);
         buffer_add(buf, &vv, 4);
-        buffer_add(buf, (void*)body, body_length);
+        buffer_add(buf, body, body_length);
     }
 }
 

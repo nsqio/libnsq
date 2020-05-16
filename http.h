@@ -4,6 +4,8 @@
 #include <ev.h>
 #include <curl/curl.h>
 
+struct Buffer; // from evbuffsock.h
+
 typedef struct HttpClient {
     CURLM *multi;
     struct ev_loop *loop;

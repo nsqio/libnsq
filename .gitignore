@@ -1,7 +1,5 @@
 libnsq.a
-test
-test-nsqd
-test-lookupd
+test-*
 *.o
 *.dSYM
 .DS_Store
