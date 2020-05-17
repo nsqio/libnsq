@@ -1,6 +1,6 @@
 #include "nsq.h"
 
-static void message_handler(nsqRdr *rdr, nsqdConn *conn, nsqMsg *msg, void *ctx)
+static void message_handler(nsqio *rdr, nsqdConn *conn, nsqMsg *msg, void *ctx)
 {
     _DEBUG("%s: %lld, %d, %s, %lu, %.*s\n", __FUNCTION__, msg->timestamp, msg->attempts, msg->id,
         msg->body_length, (int)msg->body_length, msg->body);
@@ -30,7 +30,7 @@ int main(int argc, char **argv)
         printf("not enough args from command line\n");
         return 1;
     }
-    nsqRdr *rdr;
+    nsqio *rdr;
     struct ev_loop *loop;
     void *ctx = NULL; //(void *)(new TestNsqMsgContext());
 

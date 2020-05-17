@@ -101,7 +101,7 @@ nsqdConn *new_nsqd_connection(struct ev_loop *loop, const char *address, int por
     void *arg)
 {
     nsqdConn *conn;
-    nsqRdr *rdr = (nsqRdr *)arg;
+    nsqio *rdr = (nsqio *)arg;
 
     conn = (nsqdConn *)malloc(sizeof(nsqdConn));
     conn->address = strdup(address);
@@ -149,7 +149,7 @@ void nsqd_connection_disconnect(nsqdConn *conn)
 void nsqd_connection_init_timer(nsqdConn *conn,
         void (*reconnect_callback)(EV_P_ ev_timer *w, int revents))
 {
-    nsqRdr *rdr = (nsqRdr *)conn->arg;
+    nsqio *rdr = (nsqio *)conn->arg;
     conn->reconnect_timer = (ev_timer *)malloc(sizeof(ev_timer));
     ev_timer_init(conn->reconnect_timer, reconnect_callback, rdr->cfg->lookupd_interval, rdr->cfg->lookupd_interval);
     conn->reconnect_timer->data = conn;

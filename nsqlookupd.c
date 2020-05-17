@@ -7,7 +7,7 @@
 
 void nsq_lookupd_request_cb(httpRequest *req, httpResponse *resp, void *arg)
 {
-    nsqRdr *rdr = (nsqRdr *)arg;
+    nsqio *rdr = (nsqio *)arg;
     nsq_json_t *jsobj, *data, *producers, *producer, *broadcast_address_obj, *tcp_port_obj;
     nsq_json_tokener_t *jstok;
     nsqdConn *conn;
