@@ -18,6 +18,7 @@ LIBS+=-ljson-c
 endif
 
 LIBNSQ_SOURCES = \
+nsqio.c \
 command.c \
 message.c \
 reader.c \
@@ -40,10 +41,10 @@ libnsq.a: $(patsubst %.c, %.o, ${LIBNSQ_SOURCES})
 
 test: test-nsqd test-lookupd test-evbuffsock
 
-test-nsqd: test.c libnsq.a
+test-nsqd: test_sub.c libnsq.a
 	$(CC) -o $@ $^ -I. $(CFLAGS) $(LIBS) -DNSQD_STANDALONE
 
-test-lookupd: test.c libnsq.a
+test-lookupd: test_sub.c libnsq.a
 	$(CC) -o $@ $^ -I. $(CFLAGS) $(LIBS)
 
 test-evbuffsock: test_evbuffsock.c buffer.c

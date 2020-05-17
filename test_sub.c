@@ -35,7 +35,7 @@ int main(int argc, char **argv)
     void *ctx = NULL; //(void *)(new TestNsqMsgContext());
 
     loop = ev_default_loop(0);
-    rdr = new_nsq_reader(loop, argv[2], argv[3], ctx, NULL, NULL, NULL, message_handler);
+    rdr = new_nsqio(loop, argv[2], argv[3], ctx, NULL, NULL, message_handler);
 
 #ifdef NSQD_STANDALONE
     nsq_reader_connect_to_nsqd(rdr, argv[1], 4150);

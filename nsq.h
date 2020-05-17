@@ -82,12 +82,12 @@ typedef struct NSQIO {
     void (*msg_callback)(struct NSQIO *rdr, nsqdConn *conn, nsqMsg *msg, void *ctx);
 } nsqio;
 
-nsqio *new_nsq_reader(struct ev_loop *loop, const char *topic, const char *channel, void *ctx,
-    nsqCfg *cfg,
-    void (*connect_callback)(nsqio *rdr, nsqdConn *conn),
-    void (*close_callback)(nsqio *rdr, nsqdConn *conn),
-    void (*msg_callback)(nsqio *rdr, nsqdConn *conn, nsqMsg *msg, void *ctx));
-void free_nsq_reader(nsqio *rdr);
+nsqio *new_nsqio(struct ev_loop *loop, const char *topic, const char *channel, void *ctx,
+    void (*connect_callback)(nsqio *, nsqdConn *conn),
+    void (*close_callback)(nsqio *, nsqdConn *conn),
+    void (*msg_callback)(nsqio *, nsqdConn *conn, nsqMsg *msg, void *ctx));
+void free_nsqio(nsqio *);
+
 int nsq_reader_connect_to_nsqd(nsqio *rdr, const char *address, int port);
 int nsq_reader_connect_to_nsqlookupd(nsqio *rdr);
 int nsq_reader_add_nsqlookupd_endpoint(nsqio *rdr, const char *address, int port);
