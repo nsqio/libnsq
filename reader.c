@@ -147,7 +147,7 @@ int nsq_reader_connect_to_nsqd(nsqio *rdr, const char *address, int port)
     return rc;
 }
 
-void nsq_run(struct ev_loop *loop)
+void nsq_reader_run(struct ev_loop *loop)
 {
     srand((unsigned)time(NULL));
     ev_loop(loop, 0);

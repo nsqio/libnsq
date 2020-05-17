@@ -43,7 +43,7 @@ int main(int argc, char **argv)
 #else
     nsq_reader_add_nsqlookupd_endpoint(rdr, argv[1], 4161);
 #endif
-    nsq_run(loop);
+    nsq_reader_run(loop);
 
     return 0;
 }
