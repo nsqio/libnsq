@@ -11,12 +11,12 @@ uint64_t ntoh64(const uint8_t *data)
            (uint64_t)(data[1]) << 48 | (uint64_t)(data[0]) << 56;
 }
 
-nsqMsg *nsq_decode_message(const char *data, size_t data_length)
+struct NSQMessage *nsq_decode_message(const char *data, size_t data_length)
 {
-    nsqMsg *msg;
+    struct NSQMessage *msg;
     size_t body_length;
 
-    msg = (nsqMsg *)malloc(sizeof(nsqMsg));
+    msg = (struct NSQMessage *)malloc(sizeof(struct NSQMessage));
     msg->timestamp = (int64_t)ntoh64((uint8_t *)data);
     msg->attempts = ntohs(*(uint16_t *)(data + 8));
     memcpy(&msg->id, data + 10, 16);
@@ -28,7 +28,7 @@ nsqMsg *nsq_decode_message(const char *data, size_t data_length)
     return msg;
 }
 
-void free_nsq_message(nsqMsg *msg)
+void free_nsq_message(struct NSQMessage *msg)
 {
     if (msg) {
         free(msg->body);

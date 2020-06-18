@@ -6,8 +6,8 @@
 #include <stdlib.h>
 
 
-static void nsq_buffer_add(nsqBuf *buf, const char *name,
-                           const nsqCmdParams params[], size_t psize,
+static void nsq_buffer_add(struct Buffer *buf, const char *name,
+                           const struct NSQCmdParams params[], size_t psize,
                            const char *body, const size_t body_length)
 {
     char b[64];
@@ -39,72 +39,72 @@ static void nsq_buffer_add(nsqBuf *buf, const char *name,
     }
 }
 
-void nsq_subscribe(nsqBuf *buf, const char *topic, const char *channel)
+void nsq_subscribe(struct Buffer *buf, const char *topic, const char *channel)
 {
     const char *name = "SUB";
-    const nsqCmdParams params[2] = {
+    const struct NSQCmdParams params[2] = {
         {(void *)topic, NSQ_PARAM_TYPE_CHAR},
         {(void *)channel, NSQ_PARAM_TYPE_CHAR},
     };
     nsq_buffer_add(buf, name, params, 2, NULL, 0);
 }
 
-void nsq_ready(nsqBuf *buf, int count)
+void nsq_ready(struct Buffer *buf, int count)
 {
     const char *name = "RDY";
-    const nsqCmdParams params[1] = {
+    const struct NSQCmdParams params[1] = {
         {&count, NSQ_PARAM_TYPE_INT},
     };
     nsq_buffer_add(buf, name, params, 1, NULL, 0);
 }
 
-void nsq_finish(nsqBuf *buf, const char *id)
+void nsq_finish(struct Buffer *buf, const char *id)
 {
     const char *name = "FIN";
-    const nsqCmdParams params[1] = {
+    const struct NSQCmdParams params[1] = {
         {(void *)id, NSQ_PARAM_TYPE_CHAR},
     };
     nsq_buffer_add(buf, name, params, 1, NULL, 0);
 }
 
-void nsq_requeue(nsqBuf *buf, const char *id, int timeout_ms)
+void nsq_requeue(struct Buffer *buf, const char *id, int timeout_ms)
 {
     const char *name = "REQ";
-    const nsqCmdParams params[2] = {
+    const struct NSQCmdParams params[2] = {
         {(void *)id, NSQ_PARAM_TYPE_CHAR},
         {&timeout_ms, NSQ_PARAM_TYPE_INT},
     };
     nsq_buffer_add(buf, name, params, 2, NULL, 0);
 }
 
-void nsq_nop(nsqBuf *buf)
+void nsq_nop(struct Buffer *buf)
 {
     nsq_buffer_add(buf, "NOP", NULL, 0, NULL, 0);
 }
 
-void nsq_publish(nsqBuf *buf, const char *topic, const char *body)
+void nsq_publish(struct Buffer *buf, const char *topic, const char *body)
 {
     const char *name = "PUB";
-    const nsqCmdParams params[1] = {
+    const struct NSQCmdParams params[1] = {
         {(void *)topic, NSQ_PARAM_TYPE_CHAR},
     };
     nsq_buffer_add(buf, name, params, 1, body, strlen(body));
 }
 
-void nsq_defer_publish(nsqBuf *buf, const char *topic, const char *body, int defer_time_sec)
+void nsq_defer_publish(struct Buffer *buf, const char *topic, const char *body, int defer_time_sec)
 {
     const char *name = "DPUB";
-    const nsqCmdParams params[2] = {
+    const struct NSQCmdParams params[2] = {
         {(void *)topic, NSQ_PARAM_TYPE_CHAR},
         {&defer_time_sec, NSQ_PARAM_TYPE_INT},
     };
     nsq_buffer_add(buf, name, params, 2, body, strlen(body));
 }
 
-void nsq_multi_publish(nsqBuf *buf, const char *topic, const char **body, const size_t body_size)
+void nsq_multi_publish(struct Buffer *buf, const char *topic, const char **body, const size_t body_size)
 {
     const char *name = "MPUB";
-    const nsqCmdParams params[1] = {
+    const struct NSQCmdParams params[1] = {
         {(void *)topic, NSQ_PARAM_TYPE_CHAR},
     };
 
@@ -136,29 +136,29 @@ void nsq_multi_publish(nsqBuf *buf, const char *topic, const char **body, const 
     nsq_buffer_add(buf, name, params, 1, b, s);
 }
 
-void nsq_touch(nsqBuf *buf, const char *id)
+void nsq_touch(struct Buffer *buf, const char *id)
 {
     const char *name = "TOUCH";
-    const nsqCmdParams params[1] = {
+    const struct NSQCmdParams params[1] = {
         {(void *)id, NSQ_PARAM_TYPE_CHAR},
     };
     nsq_buffer_add(buf, name, params, 1, NULL, 0);
 }
 
-void nsq_cleanly_close_connection(nsqBuf *buf)
+void nsq_cleanly_close_connection(struct Buffer *buf)
 {
     const char *name = "CLS";
     nsq_buffer_add(buf, name, NULL, 0, NULL, 0);
 }
 
-void nsq_auth(nsqBuf *buf, const char *secret)
+void nsq_auth(struct Buffer *buf, const char *secret)
 {
     const char *name = "AUTH";
     nsq_buffer_add(buf, name, NULL, 0, secret, strlen(secret));
 }
 
 //TODO: should handle object to json string
-void nsq_identify(nsqBuf *buf, const char *json_body)
+void nsq_identify(struct Buffer *buf, const char *json_body)
 {
     const char *name = "IDENTIFY";
     nsq_buffer_add(buf, name, NULL, 1, json_body, strlen(json_body));

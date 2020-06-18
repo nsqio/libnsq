@@ -5,12 +5,12 @@
 #include "utlist.h"
 
 
-void nsq_lookupd_request_cb(httpRequest *req, httpResponse *resp, void *arg)
+void nsq_lookupd_request_cb(struct HttpRequest *req, struct HttpResponse *resp, void *arg)
 {
-    nsqRdr *rdr = (nsqRdr *)arg;
+    struct NSQReader *rdr = (struct NSQReader *)arg;
     nsq_json_t *jsobj, *producers, *producer, *broadcast_address_obj, *tcp_port_obj;
     nsq_json_tokener_t *jstok;
-    nsqdConn *conn;
+    struct NSQDConnection *conn;
     const char *broadcast_address;
     int found, tcp_port;
 
@@ -71,11 +71,11 @@ void nsq_lookupd_request_cb(httpRequest *req, httpResponse *resp, void *arg)
     free_http_request(req);
 }
 
-nsqLE *new_nsqlookupd_endpoint(const char *address, int port)
+struct NSQLookupdEndpoint *new_nsqlookupd_endpoint(const char *address, int port)
 {
-    nsqLE *nsqlookupd_endpoint;
+    struct NSQLookupdEndpoint *nsqlookupd_endpoint;
 
-    nsqlookupd_endpoint = (nsqLE *)malloc(sizeof(nsqLE));
+    nsqlookupd_endpoint = (struct NSQLookupdEndpoint *)malloc(sizeof(struct NSQLookupdEndpoint));
     nsqlookupd_endpoint->address = strdup(address);
     nsqlookupd_endpoint->port = port;
     nsqlookupd_endpoint->next = NULL;
@@ -83,7 +83,7 @@ nsqLE *new_nsqlookupd_endpoint(const char *address, int port)
     return nsqlookupd_endpoint;
 }
 
-void free_nsqlookupd_endpoint(nsqLE *nsqlookupd_endpoint)
+void free_nsqlookupd_endpoint(struct NSQLookupdEndpoint *nsqlookupd_endpoint)
 {
     if (nsqlookupd_endpoint) {
         free(nsqlookupd_endpoint->address);
