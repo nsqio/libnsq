@@ -125,7 +125,7 @@ static void buffered_socket_connect_cb(int revents, void *arg)
 
     if (revents & EV_TIMEOUT) {
         _DEBUG("%s: connection timeout for \"%s:%d\" on %d\n",
-            __FUNCTION__, buffsock->address, buffsock->port, buffsock->fd);
+               __FUNCTION__, buffsock->address, buffsock->port, buffsock->fd);
 
         buffered_socket_close(buffsock);
         return;
@@ -240,7 +240,7 @@ static void buffered_socket_read_bytes_cb(EV_P_ struct ev_timer *w, int revents)
 }
 
 void buffered_socket_read_bytes(struct BufferedSocket *buffsock, size_t n,
-    void (*data_callback)(struct BufferedSocket *buffsock, void *arg), void *arg)
+                                void (*data_callback)(struct BufferedSocket *buffsock, void *arg), void *arg)
 {
     buffsock->read_bytes_callback = data_callback;
     buffsock->read_bytes_arg = arg;

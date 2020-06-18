@@ -83,10 +83,10 @@ typedef struct NSQReader {
 } nsqRdr;
 
 nsqRdr *new_nsq_reader(struct ev_loop *loop, const char *topic, const char *channel, void *ctx,
-    nsqRdrCfg *cfg,
-    void (*connect_callback)(nsqRdr *rdr, nsqdConn *conn),
-    void (*close_callback)(nsqRdr *rdr, nsqdConn *conn),
-    void (*msg_callback)(nsqRdr *rdr, nsqdConn *conn, nsqMsg *msg, void *ctx));
+                       nsqRdrCfg *cfg,
+                       void (*connect_callback)(nsqRdr *rdr, nsqdConn *conn),
+                       void (*close_callback)(nsqRdr *rdr, nsqdConn *conn),
+                       void (*msg_callback)(nsqRdr *rdr, nsqdConn *conn, nsqMsg *msg, void *ctx));
 void free_nsq_reader(nsqRdr *rdr);
 int nsq_reader_connect_to_nsqd(nsqRdr *rdr, const char *address, int port);
 int nsq_reader_connect_to_nsqlookupd(nsqRdr *rdr);
@@ -95,16 +95,16 @@ void nsq_reader_set_loop(nsqRdr *rdr, struct ev_loop *loop);
 void nsq_run(struct ev_loop *loop);
 
 nsqdConn *new_nsqd_connection(struct ev_loop *loop, const char *address, int port,
-    void (*connect_callback)(nsqdConn *conn, void *arg),
-    void (*close_callback)(nsqdConn *conn, void *arg),
-    void (*msg_callback)(nsqdConn *conn, nsqMsg *msg, void *arg),
-    void *arg);
+                              void (*connect_callback)(nsqdConn *conn, void *arg),
+                              void (*close_callback)(nsqdConn *conn, void *arg),
+                              void (*msg_callback)(nsqdConn *conn, nsqMsg *msg, void *arg),
+                              void *arg);
 void free_nsqd_connection(nsqdConn *conn);
 int nsqd_connection_connect(nsqdConn *conn);
 void nsqd_connection_disconnect(nsqdConn *conn);
 
 void nsqd_connection_init_timer(nsqdConn *conn,
-        void (*reconnect_callback)(EV_P_ ev_timer *w, int revents));
+                                void (*reconnect_callback)(EV_P_ ev_timer *w, int revents));
 void nsqd_connection_stop_timer(nsqdConn *conn);
 
 void nsq_subscribe(nsqBuf *buf, const char *topic, const char *channel);

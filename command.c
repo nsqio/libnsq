@@ -109,8 +109,8 @@ void nsq_multi_publish(nsqBuf *buf, const char *topic, const char **body, const 
     };
 
     size_t s = 4;
-    for (size_t i = 0; i<body_size; i++) {
-        s += strlen(body[i])+4;
+    for (size_t i = 0; i < body_size; i++) {
+        s += strlen(body[i]) + 4;
     }
     char *b = malloc(s * sizeof(char));
     assert(NULL != b);
@@ -118,18 +118,18 @@ void nsq_multi_publish(nsqBuf *buf, const char *topic, const char **body, const 
     size_t n = 0;
     uint32_t v = 0;
     v = htonl((uint32_t)body_size);
-    memcpy(b+n, &v, 4);
+    memcpy(b + n, &v, 4);
     n += 4;
 
     size_t l = 0;
     for (size_t i = 0; i < body_size; i++) {
         l = strlen(body[i]);
         v = htonl((uint32_t)l);
-        memcpy(b+n, &v, 4);
+        memcpy(b + n, &v, 4);
         n += 4;
 
         l = strlen(body[i]);
-        memcpy(b+n, body[i], l);
+        memcpy(b + n, body[i], l);
         n += l;
     }
 

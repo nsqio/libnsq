@@ -43,7 +43,7 @@ static void nsq_reader_msg_cb(nsqdConn *conn, nsqMsg *msg, void *arg)
     _DEBUG("%s: %p %p\n", __FUNCTION__, msg, rdr);
 
     if (rdr->msg_callback) {
-        msg->id[sizeof(msg->id)-1] = '\0';
+        msg->id[sizeof(msg->id) - 1] = '\0';
         rdr->msg_callback(rdr, conn, msg, rdr->ctx);
     }
 }
@@ -94,7 +94,7 @@ static void nsq_reader_lookupd_poll_cb(EV_P_ struct ev_timer *w, int revents)
     LL_FOREACH(rdr->lookupd, nsqlookupd_endpoint) {
         count++;
     }
-    if(count == 0) {
+    if (count == 0) {
         goto end;
     }
     idx = rand() % count;
@@ -105,7 +105,7 @@ static void nsq_reader_lookupd_poll_cb(EV_P_ struct ev_timer *w, int revents)
     LL_FOREACH(rdr->lookupd, nsqlookupd_endpoint) {
         if (i++ == idx) {
             sprintf(buf, "http://%s:%d/lookup?topic=%s", nsqlookupd_endpoint->address,
-                nsqlookupd_endpoint->port, rdr->topic);
+                    nsqlookupd_endpoint->port, rdr->topic);
             req = new_http_request(buf, nsq_lookupd_request_cb, rdr);
             http_client_get((struct HttpClient *)rdr->httpc, req);
             break;
@@ -117,10 +117,10 @@ end:
 }
 
 nsqRdr *new_nsq_reader(struct ev_loop *loop, const char *topic, const char *channel, void *ctx,
-    nsqRdrCfg *cfg,
-    void (*connect_callback)(nsqRdr *rdr, nsqdConn *conn),
-    void (*close_callback)(nsqRdr *rdr, nsqdConn *conn),
-    void (*msg_callback)(nsqRdr *rdr, nsqdConn *conn, nsqMsg *msg, void *ctx))
+                       nsqRdrCfg *cfg,
+                       void (*connect_callback)(nsqRdr *rdr, nsqdConn *conn),
+                       void (*close_callback)(nsqRdr *rdr, nsqdConn *conn),
+                       void (*msg_callback)(nsqRdr *rdr, nsqdConn *conn, nsqMsg *msg, void *ctx))
 {
     nsqRdr *rdr;
 
@@ -208,7 +208,7 @@ int nsq_reader_connect_to_nsqd(nsqRdr *rdr, const char *address, int port)
     int rc;
 
     conn = new_nsqd_connection(rdr->loop, address, port,
-        nsq_reader_connect_cb, nsq_reader_close_cb, nsq_reader_msg_cb, rdr);
+                               nsq_reader_connect_cb, nsq_reader_close_cb, nsq_reader_msg_cb, rdr);
     rc = nsqd_connection_connect(conn);
     if (rc > 0) {
         LL_APPEND(rdr->conns, conn);

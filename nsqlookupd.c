@@ -15,7 +15,7 @@ void nsq_lookupd_request_cb(httpRequest *req, httpResponse *resp, void *arg)
     int found, tcp_port;
 
     _DEBUG("%s: status_code %d, body %.*s\n", __FUNCTION__, resp->status_code,
-        (int)BUFFER_HAS_DATA(resp->data), resp->data->data);
+           (int)BUFFER_HAS_DATA(resp->data), resp->data->data);
 
     if (resp->status_code != 200) {
         free_http_response(resp);
@@ -53,7 +53,7 @@ void nsq_lookupd_request_cb(httpRequest *req, httpResponse *resp, void *arg)
         found = 0;
         LL_FOREACH(rdr->conns, conn) {
             if (strcmp(conn->bs->address, broadcast_address) == 0
-                && conn->bs->port == tcp_port) {
+                    && conn->bs->port == tcp_port) {
                 found = 1;
                 break;
             }

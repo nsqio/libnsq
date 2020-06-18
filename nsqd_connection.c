@@ -52,7 +52,7 @@ static void nsqd_connection_read_data(nsqBufdSock *buffsock, void *arg)
     conn->current_msg_size -= 4;
 
     _DEBUG("%s: frame type %d, data: %.*s\n", __FUNCTION__, conn->current_frame_type,
-        conn->current_msg_size, buffsock->read_buf->data);
+           conn->current_msg_size, buffsock->read_buf->data);
 
     conn->current_data = buffsock->read_buf->data;
     switch (conn->current_frame_type) {
@@ -95,10 +95,10 @@ static void nsqd_connection_error_cb(nsqBufdSock *buffsock, void *arg)
 }
 
 nsqdConn *new_nsqd_connection(struct ev_loop *loop, const char *address, int port,
-    void (*connect_callback)(nsqdConn *conn, void *arg),
-    void (*close_callback)(nsqdConn *conn, void *arg),
-    void (*msg_callback)(nsqdConn *conn, nsqMsg *msg, void *arg),
-    void *arg)
+                              void (*connect_callback)(nsqdConn *conn, void *arg),
+                              void (*close_callback)(nsqdConn *conn, void *arg),
+                              void (*msg_callback)(nsqdConn *conn, nsqMsg *msg, void *arg),
+                              void *arg)
 {
     nsqdConn *conn;
     nsqRdr *rdr = (nsqRdr *)arg;
@@ -116,11 +116,11 @@ nsqdConn *new_nsqd_connection(struct ev_loop *loop, const char *address, int por
     conn->reconnect_timer = NULL;
 
     conn->bs = new_buffered_socket(loop, address, port,
-        rdr->cfg->read_buf_len, rdr->cfg->read_buf_capacity,
-        rdr->cfg->write_buf_len, rdr->cfg->write_buf_capacity,
-        nsqd_connection_connect_cb, nsqd_connection_close_cb,
-        NULL, NULL, nsqd_connection_error_cb,
-        conn);
+                                   rdr->cfg->read_buf_len, rdr->cfg->read_buf_capacity,
+                                   rdr->cfg->write_buf_len, rdr->cfg->write_buf_capacity,
+                                   nsqd_connection_connect_cb, nsqd_connection_close_cb,
+                                   NULL, NULL, nsqd_connection_error_cb,
+                                   conn);
 
     return conn;
 }
@@ -147,7 +147,7 @@ void nsqd_connection_disconnect(nsqdConn *conn)
 }
 
 void nsqd_connection_init_timer(nsqdConn *conn,
-        void (*reconnect_callback)(EV_P_ ev_timer *w, int revents))
+                                void (*reconnect_callback)(EV_P_ ev_timer *w, int revents))
 {
     nsqRdr *rdr = (nsqRdr *)conn->arg;
     conn->reconnect_timer = (ev_timer *)malloc(sizeof(ev_timer));

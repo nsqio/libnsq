@@ -148,7 +148,7 @@ void free_http_client(httpClient *httpc)
 }
 
 httpRequest *new_http_request(const char *url,
-    void (*callback)(httpRequest *req, httpResponse *resp, void *arg), void *cb_arg)
+                              void (*callback)(httpRequest *req, httpResponse *resp, void *arg), void *cb_arg)
 {
     httpRequest *req;
 
