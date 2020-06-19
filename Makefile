@@ -17,6 +17,10 @@ else
 LIBS+=-ljson-c
 endif
 
+LIBNSQ_HEADERS = \
+nsq.h \
+http.h
+
 LIBNSQ_SOURCES = \
 command.c \
 message.c \
@@ -37,6 +41,18 @@ libnsq: libnsq.a
 libnsq.a: $(patsubst %.c, %.o, ${LIBNSQ_SOURCES})
 	$(AR) $(AR_FLAGS) $@ $^
 	$(RANLIB) $@
+
+fmt: ${LIBNSQ_SOURCES} ${LIBNSQ_HEADERS}
+	astyle --style=1tbs \
+		--lineend=linux \
+		--convert-tabs \
+		--preserve-date \
+		--pad-header \
+		--indent-switches \
+		--align-pointer=name \
+		--align-reference=name \
+		--pad-oper \
+		-n $^
 
 test: test-nsqd test-lookupd test-evbuffsock
 
