@@ -81,7 +81,7 @@ int buffered_socket_connect(struct BufferedSocket *buffsock);
 void buffered_socket_close(struct BufferedSocket *socket);
 size_t buffered_socket_write(struct BufferedSocket *buffsock, void *data, size_t len);
 size_t buffered_socket_write_buffer(struct BufferedSocket *buffsock, struct Buffer *buf);
-void buffered_socket_read_bytes(struct BufferedSocket *buffsock, size_t n, 
-    void (*data_callback)(struct BufferedSocket *buffsock, void *arg), void *arg);
+void buffered_socket_read_bytes(struct BufferedSocket *buffsock, size_t n,
+                                void (*data_callback)(struct BufferedSocket *buffsock, void *arg), void *arg);
 
 #endif

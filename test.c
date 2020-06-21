@@ -1,18 +1,18 @@
 #include "nsq.h"
 
-static void message_handler(nsqRdr *rdr, nsqdConn *conn, nsqMsg *msg, void *ctx)
+static void message_handler(struct NSQReader *rdr, struct NSQDConnection *conn, struct NSQMessage *msg, void *ctx)
 {
     _DEBUG("%s: %lld, %d, %s, %lu, %.*s\n", __FUNCTION__, msg->timestamp, msg->attempts, msg->id,
-        msg->body_length, (int)msg->body_length, msg->body);
+           msg->body_length, (int)msg->body_length, msg->body);
     int ret = 0;
     //TestNsqMsgContext * test_ctx = (TestNsqMsgContext *)ctx;
     //int ret= ctx->process(msg->body, msg->body_length);
 
     buffer_reset(conn->command_buf);
 
-    if(ret < 0){
+    if (ret < 0) {
         nsq_requeue(conn->command_buf, msg->id, 100);
-    }else{
+    } else {
         nsq_finish(conn->command_buf, msg->id);
     }
     buffered_socket_write_buffer(conn->bs, conn->command_buf);
@@ -30,7 +30,7 @@ int main(int argc, char **argv)
         printf("not enough args from command line\n");
         return 1;
     }
-    nsqRdr *rdr;
+    struct NSQReader *rdr;
     struct ev_loop *loop;
     void *ctx = NULL; //(void *)(new TestNsqMsgContext());
 

@@ -15,9 +15,9 @@
 #define DEFAULT_WRITE_BUF_CAPACITY   16 * 1024
 
 
-static void nsq_reader_connect_cb(nsqdConn *conn, void *arg)
+static void nsq_reader_connect_cb(struct NSQDConnection *conn, void *arg)
 {
-    nsqRdr *rdr = (nsqRdr *)arg;
+    struct NSQReader *rdr = (struct NSQReader *)arg;
 
     _DEBUG("%s: %p\n", __FUNCTION__, rdr);
 
@@ -36,21 +36,21 @@ static void nsq_reader_connect_cb(nsqdConn *conn, void *arg)
     buffered_socket_write_buffer(conn->bs, conn->command_buf);
 }
 
-static void nsq_reader_msg_cb(nsqdConn *conn, nsqMsg *msg, void *arg)
+static void nsq_reader_msg_cb(struct NSQDConnection *conn, struct NSQMessage *msg, void *arg)
 {
-    nsqRdr *rdr = (nsqRdr *)arg;
+    struct NSQReader *rdr = (struct NSQReader *)arg;
 
     _DEBUG("%s: %p %p\n", __FUNCTION__, msg, rdr);
 
     if (rdr->msg_callback) {
-        msg->id[sizeof(msg->id)-1] = '\0';
+        msg->id[sizeof(msg->id) - 1] = '\0';
         rdr->msg_callback(rdr, conn, msg, rdr->ctx);
     }
 }
 
-static void nsq_reader_close_cb(nsqdConn *conn, void *arg)
+static void nsq_reader_close_cb(struct NSQDConnection *conn, void *arg)
 {
-    nsqRdr *rdr = (nsqRdr *)arg;
+    struct NSQReader *rdr = (struct NSQReader *)arg;
 
     _DEBUG("%s: %p\n", __FUNCTION__, rdr);
 
@@ -68,12 +68,12 @@ static void nsq_reader_close_cb(nsqdConn *conn, void *arg)
     }
 }
 
-void nsq_lookupd_request_cb(httpRequest *req, httpResponse *resp, void *arg);
+void nsq_lookupd_request_cb(struct HttpRequest *req, struct HttpResponse *resp, void *arg);
 
 static void nsq_reader_reconnect_cb(EV_P_ struct ev_timer *w, int revents)
 {
-    nsqdConn *conn = (nsqdConn *)w->data;
-    nsqRdr *rdr = (nsqRdr *)conn->arg;
+    struct NSQDConnection *conn = (struct NSQDConnection *)w->data;
+    struct NSQReader *rdr = (struct NSQReader *)conn->arg;
 
     if (rdr->lookupd == NULL) {
         _DEBUG("%s: There is no lookupd, try to reconnect to nsqd directly\n", __FUNCTION__);
@@ -85,16 +85,16 @@ static void nsq_reader_reconnect_cb(EV_P_ struct ev_timer *w, int revents)
 
 static void nsq_reader_lookupd_poll_cb(EV_P_ struct ev_timer *w, int revents)
 {
-    nsqRdr *rdr = (nsqRdr *)w->data;
-    nsqLE *nsqlookupd_endpoint;
-    httpRequest *req;
+    struct NSQReader *rdr = (struct NSQReader *)w->data;
+    struct NSQLookupdEndpoint *nsqlookupd_endpoint;
+    struct HttpRequest *req;
     int i, idx, count = 0;
     char buf[256];
 
     LL_FOREACH(rdr->lookupd, nsqlookupd_endpoint) {
         count++;
     }
-    if(count == 0) {
+    if (count == 0) {
         goto end;
     }
     idx = rand() % count;
@@ -105,7 +105,7 @@ static void nsq_reader_lookupd_poll_cb(EV_P_ struct ev_timer *w, int revents)
     LL_FOREACH(rdr->lookupd, nsqlookupd_endpoint) {
         if (i++ == idx) {
             sprintf(buf, "http://%s:%d/lookup?topic=%s", nsqlookupd_endpoint->address,
-                nsqlookupd_endpoint->port, rdr->topic);
+                    nsqlookupd_endpoint->port, rdr->topic);
             req = new_http_request(buf, nsq_lookupd_request_cb, rdr);
             http_client_get((struct HttpClient *)rdr->httpc, req);
             break;
@@ -116,16 +116,16 @@ end:
     ev_timer_again(rdr->loop, &rdr->lookupd_poll_timer);
 }
 
-nsqRdr *new_nsq_reader(struct ev_loop *loop, const char *topic, const char *channel, void *ctx,
-    nsqRdrCfg *cfg,
-    void (*connect_callback)(nsqRdr *rdr, nsqdConn *conn),
-    void (*close_callback)(nsqRdr *rdr, nsqdConn *conn),
-    void (*msg_callback)(nsqRdr *rdr, nsqdConn *conn, nsqMsg *msg, void *ctx))
+struct NSQReader *new_nsq_reader(struct ev_loop *loop, const char *topic, const char *channel, void *ctx,
+                                 struct NSQReaderCfg *cfg,
+                                 void (*connect_callback)(struct NSQReader *rdr, struct NSQDConnection *conn),
+                                 void (*close_callback)(struct NSQReader *rdr, struct NSQDConnection *conn),
+                                 void (*msg_callback)(struct NSQReader *rdr, struct NSQDConnection *conn, struct NSQMessage *msg, void *ctx))
 {
-    nsqRdr *rdr;
+    struct NSQReader *rdr;
 
-    rdr = (nsqRdr *)malloc(sizeof(nsqRdr));
-    rdr->cfg = (nsqRdrCfg *)malloc(sizeof(nsqRdrCfg));
+    rdr = (struct NSQReader *)malloc(sizeof(struct NSQReader));
+    rdr->cfg = (struct NSQReaderCfg *)malloc(sizeof(struct NSQReaderCfg));
     if (cfg == NULL) {
         rdr->cfg->lookupd_interval     = DEFAULT_LOOKUPD_INTERVAL;
         rdr->cfg->command_buf_len      = DEFAULT_COMMAND_BUF_LEN;
@@ -159,10 +159,10 @@ nsqRdr *new_nsq_reader(struct ev_loop *loop, const char *topic, const char *chan
     return rdr;
 }
 
-void free_nsq_reader(nsqRdr *rdr)
+void free_nsq_reader(struct NSQReader *rdr)
 {
-    nsqdConn *conn;
-    nsqLE *nsqlookupd_endpoint;
+    struct NSQDConnection *conn;
+    struct NSQLookupdEndpoint *nsqlookupd_endpoint;
 
     if (rdr) {
         // TODO: this should probably trigger disconnections and then keep
@@ -180,10 +180,10 @@ void free_nsq_reader(nsqRdr *rdr)
     }
 }
 
-int nsq_reader_add_nsqlookupd_endpoint(nsqRdr *rdr, const char *address, int port)
+int nsq_reader_add_nsqlookupd_endpoint(struct NSQReader *rdr, const char *address, int port)
 {
-    nsqLE *nsqlookupd_endpoint;
-    nsqdConn *conn;
+    struct NSQLookupdEndpoint *nsqlookupd_endpoint;
+    struct NSQDConnection *conn;
 
     if (rdr->lookupd == NULL) {
         // Stop reconnect timers, use lookupd timer instead
@@ -202,13 +202,13 @@ int nsq_reader_add_nsqlookupd_endpoint(nsqRdr *rdr, const char *address, int por
     return 1;
 }
 
-int nsq_reader_connect_to_nsqd(nsqRdr *rdr, const char *address, int port)
+int nsq_reader_connect_to_nsqd(struct NSQReader *rdr, const char *address, int port)
 {
-    nsqdConn *conn;
+    struct NSQDConnection *conn;
     int rc;
 
     conn = new_nsqd_connection(rdr->loop, address, port,
-        nsq_reader_connect_cb, nsq_reader_close_cb, nsq_reader_msg_cb, rdr);
+                               nsq_reader_connect_cb, nsq_reader_close_cb, nsq_reader_msg_cb, rdr);
     rc = nsqd_connection_connect(conn);
     if (rc > 0) {
         LL_APPEND(rdr->conns, conn);
